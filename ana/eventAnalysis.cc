@@ -54,12 +54,37 @@ void clusterEvent( std::vector < fastjet::PseudoJet > constits, std::vector< flo
 void initVars(){
     for (int i = 0; i < 10; i++ ){
         m_[i] = -1.;
+        m_trimmed1_[i] = -1;
+        m_pruned1_[i] = -1;        
         pt_[i] = -1.;   
+        pt_trimmed1_[i] = -1;
+        pt_pruned1_[i] = -1;        
+        area_[i] = -1.;   
+        area_trimmed1_[i] = -1;
+        area_pruned1_[i] = -1;        
         nconstituents_[i] = -1.;
     }
     njets_ = -1.;
 }
 
+void addBranches( TTree &tree ){
+    
+    tree.Branch("m",&m_,"m[10]/F");
+    tree.Branch("m_trimmed1",&m_trimmed1_,"m_trimmed1[10]/F");
+    tree.Branch("m_pruned1",&m_pruned1_,"m_pruned1[10]/F");    
+    
+    tree.Branch("pt",&pt_,"pt[10]/F");
+    tree.Branch("pt_trimmed1",&pt_trimmed1_,"pt_trimmed1[10]/F");
+    tree.Branch("pt_pruned1",&pt_pruned1_,"pt_pruned1[10]/F");        
+    
+    tree.Branch("area",&area_,"area[10]/F");
+    tree.Branch("area_trimmed1",&area_trimmed1_,"area_trimmed1[10]/F");
+    tree.Branch("area_pruned1",&area_pruned1_,"area_pruned1[10]/F");        
+    
+    tree.Branch("nconstituents",&nconstituents_,"nconstituents[10]/F");
+    tree.Branch("njets",&njets_,"njets/F");
+        
+}
 /////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////
 
@@ -69,25 +94,15 @@ void eventAnalysis() {
     TTree* tree_gen_ = new TTree("tree_gen_", "tree_gen_");
     TTree* tree_pfchs_ = new TTree("tree_pfchs_", "tree_pfchs_");
     TTree* tree_pf_ = new TTree("tree_pf_", "tree_pf_");
-    TTree* tree_particles_ = new TTree("tree_particles_", "tree_particles_");
     
-    tree_gen_->Branch("m",&m_,"m[10]/F");
-    tree_pfchs_->Branch("m",&m_,"m[10]/F");
-    tree_pf_->Branch("m",&m_,"m[10]/F");
-    tree_gen_->Branch("pt",&pt_,"pt[10]/F");
-    tree_pfchs_->Branch("pt",&pt_,"pt[10]/F");
-    tree_pf_->Branch("pt",&pt_,"pt[10]/F");
-    tree_gen_->Branch("nconstituents",&nconstituents_,"nconstituents[10]/F");
-    tree_pfchs_->Branch("nconstituents",&nconstituents_,"nconstituents[10]/F");
-    tree_pf_->Branch("nconstituents",&nconstituents_,"nconstituents[10]/F");
-    
-    tree_gen_->Branch("njets",&njets_,"njets/F");
-    tree_pfchs_->Branch("njets",&njets_,"njets/F");
-    tree_pf_->Branch("njets",&njets_,"njets/F");
-    
+    addBranches(*tree_gen_);
+    addBranches(*tree_pfchs_);
+    addBranches(*tree_pf_);
+        
+    TTree* tree_particles_ = new TTree("tree_particles_", "tree_particles_");    
     tree_particles_->Branch("pt",&pt_part,"pt/F");
     tree_particles_->Branch("eta",&eta_part,"eta/F");    
-    
+
     initVars();
     
     // read in the file 

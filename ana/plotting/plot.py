@@ -17,68 +17,62 @@ ROOT.gStyle.SetPadLeftMargin(0.16);
 
 if __name__ == '__main__':
 
-    file = ROOT.TFile("output/outtree_20.root");
+    file = ROOT.TFile("../output/outtree_80.root");
     tree_gen = file.Get("tree_gen_");
     tree_pfchs = file.Get("tree_pfchs_");
     tree_pf = file.Get("tree_pf_");    
 
-    h_pt_gen = ROOT.TH1F("h_pt_gen",";p_{T} (GeV); count",25,0,1000);
-    h_pt_pfchs = ROOT.TH1F("h_pt_pfchs",";p_{T} (GeV); count",25,0,1000);
-    h_pt_pf = ROOT.TH1F("h_pt_pf",";p_{T} (GeV); count",25,0,1000);        
-
-    h_m_gen = ROOT.TH1F("h_m_gen",";m (GeV); count",30,0,150);
-    h_m_pfchs = ROOT.TH1F("h_m_pfchs",";m (GeV); count",30,0,150);
-    h_m_pf = ROOT.TH1F("h_m_pf",";m (GeV); count",30,0,150);   
-
-    h_nconst_gen = ROOT.TH1F("h_nconst_gen",";n constituents; count",30,0,150);
-    h_nconst_pfchs = ROOT.TH1F("h_nconst_pfchs",";n constituents; count",30,0,150);
-    h_nconst_pf = ROOT.TH1F("h_nconst_pf",";n constituents; count",30,0,150);   
+    
+    
+    vars = ["m","m_trimmed1","m_pruned1","pt","pt_trimmed1","pt_pruned1","area","area_trimmed1","area_pruned1","nconstituents"]
+    vars_x = ["m","mtrimmed1","mpruned1","pt","pt_trimmed1","pt_pruned1","area","area_trimmed1","area_pruned1","nconstituents"]
+    vars_nbin = [20]*10;
+    vars_lo = [   0,   0,   0,   0,   0,   0,    0,   0,  0,    0 ];
+    vars_hi = [ 200, 200, 200, 800, 800, 800,    2,   2,  2,  200 ];
+    
+    h_gen = [];
+    h_pfchs = [];
+    h_pf = [];
+    
+    for i in range(len(vars)):
+        h_gen.append( ROOT.TH1F("hgen_"+vars[i],";"+vars_x[i]+";n.d.",vars_nbin[i],vars_lo[i],vars_hi[i]) );
+        h_pfchs.append( ROOT.TH1F("hpfchs_"+vars[i],";"+vars_x[i]+";n.d.",vars_nbin[i],vars_lo[i],vars_hi[i]) );   
+        h_pf.append( ROOT.TH1F("hpf_"+vars[i],";"+vars_x[i]+";n.d.",vars_nbin[i],vars_lo[i],vars_hi[i]) );   
     
     for i in range(tree_gen.GetEntries()):
         
         tree_gen.GetEntry(i);
         tree_pfchs.GetEntry(i);
-        tree_pf.GetEntry(i);                
-    
-        h_pt_gen.Fill( tree_gen.pt[0] );
-        h_pt_pfchs.Fill( tree_pfchs.pt[0] );
-        h_pt_pf.Fill( tree_pf.pt[0] );                    
-
-        h_m_gen.Fill( tree_gen.m[0] );
-        h_m_pfchs.Fill( tree_pfchs.m[0] );
-        h_m_pf.Fill( tree_pf.m[0] );                    
-
-        h_nconst_gen.Fill( tree_gen.nconstituents[0] );
-        h_nconst_pfchs.Fill( tree_pfchs.nconstituents[0] );
-        h_nconst_pf.Fill( tree_pf.nconstituents[0] );                    
-    
-    h_pt_pfchs.SetLineColor( 2 );
-    h_m_pfchs.SetLineColor( 2 );    
-    h_nconst_pfchs.SetLineColor( 2 );    
-
-    h_pt_pf.SetLineColor( 4 );
-    h_m_pf.SetLineColor( 4 );    
-    h_nconst_pf.SetLineColor( 4 );    
+        tree_pf.GetEntry(i);        
+        for j in range(len(vars)):
+            h_gen[j].Fill( getattr( tree_gen, vars[j] )[0] );             
+            h_pfchs[j].Fill( getattr( tree_pfchs, vars[j] )[0] );             
+            h_pf[j].Fill( getattr( tree_pf, vars[j] )[0] );             
+   
         
     # now plot
 
-    can_m = ROOT.TCanvas("can_m","can_m",800,800);
-    h_m_gen.Draw();
-    h_m_pfchs.Draw("sames");
-    h_m_pf.Draw("sames");        
-    can_m.SaveAs("plots/can_m.eps");
+    ##### plot
+    # scale and color
+    for j in range(len(vars)):
+        if h_gen[j].Integral() > 0:   h_gen[j].Scale( 1./h_gen[j].Integral() );
+        if h_pfchs[j].Integral() > 0: h_pfchs[j].Scale( 1./h_pfchs[j].Integral() );
+        if h_pf[j].Integral() > 0:    h_pf[j].Scale( 1./h_pf[j].Integral() );
         
-    can_pt = ROOT.TCanvas("can_pt","can_pt",800,800);
-    h_pt_gen.Draw();
-    h_pt_pfchs.Draw("sames");
-    h_pt_pf.Draw("sames");        
-    can_pt.SaveAs("plots/can_pt.eps");            
+        h_pfchs[j].SetLineColor( 2 );
+        h_pf[j].SetLineColor( 4 );
 
-    can_nconst = ROOT.TCanvas("can_nconst","can_nconst",800,800);
-    h_nconst_gen.Draw();
-    h_nconst_pfchs.Draw("sames");
-    h_nconst_pf.Draw("sames");        
-    can_nconst.SaveAs("plots/can_nconst.eps");            
+    # on canvas
+    for j in range(len(vars)):
+        
+        tmpcan = ROOT.TCanvas("can"+str(j),"can"+str(j),800,800);
+        h_gen[j].SetMaximum( 1.2*max( h_gen[j].GetMaximum(), h_pfchs[j].GetMaximum(), h_pf[j].GetMaximum() ) );
+        h_gen[j].SetMinimum( 0 );        
+        h_gen[j].Draw();
+        h_pfchs[j].Draw("sames");
+        h_pf[j].Draw("sames");        
+        tmpcan.SaveAs("figs/"+vars[j]+".eps");
+        tmpcan.SaveAs("figs/"+vars[j]+".png");        
 
     ##----------------------------------------------------
     ##----------------------------------------------------
