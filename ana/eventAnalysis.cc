@@ -12,6 +12,10 @@
 #include "TRandom.h"
 #include "TLorentzVector.h"
 #include "TLorentzRotation.h"
+#include "TH2F.h"
+#include "TH3F.h"
+#include "TCanvas.h"
+#include "TStyle.h"
 
 #include <fastjet/ClusterSequence.hh>
 #include <fastjet/GhostedAreaSpec.hh>
@@ -75,6 +79,8 @@ float eta_part;
 void readEvent( std::vector< fastjet::PseudoJet > &gen, std::vector< fastjet::PseudoJet > &pfchs, std::vector< fastjet::PseudoJet > &pf );
 //void clusterEvent( std::vector < fastjet::PseudoJet > constits, std::vector< float > pdgids, TTree &tree );
 void analyzeEvent( std::vector < fastjet::PseudoJet > constits, TTree &tree );
+void plotEvent( std::vector < fastjet::PseudoJet > genParticles, char* name );
+void setTDRStyle();
 
 void initVars(){
     for (int i = 0; i < 10; i++ ){
@@ -171,6 +177,8 @@ float computePTMiss( std::vector< fastjet::PseudoJet > psjets, float cutoff = 0.
 
 void eventAnalysis() {
     
+    setTDRStyle();
+    
     TFile fout_("output/outtree_20.root", "RECREATE");
     TTree* tree_gen_ = new TTree("tree_gen_", "tree_gen_");
     TTree* tree_pfchs_ = new TTree("tree_pfchs_", "tree_pfchs_");
@@ -187,7 +195,7 @@ void eventAnalysis() {
     initVars();
     
     int nEvts = 0;
-    int maxEvents = 2000;
+    int maxEvents = 11;
     
     // fill vector of pseudojets
     std::vector < fastjet::PseudoJet > genParticles;
@@ -209,7 +217,18 @@ void eventAnalysis() {
             initVars();
             analyzeEvent( pfCHS, *tree_pfchs_ );                
             initVars();
-            analyzeEvent( pf, *tree_pf_ );      
+            analyzeEvent( pf, *tree_pf_ );   
+            
+            // plot event
+            if (nEvts == 1 || nEvts == 10){
+                char canvname[150];
+                sprintf( canvname, "displays/dis_gen_%i", nEvts );
+                plotEvent(genParticles, canvname);
+                sprintf( canvname, "displays/dis_pfchs_%i", nEvts );
+                plotEvent(pfCHS, canvname);
+                sprintf( canvname, "displays/dis_pf_%i", nEvts );                
+                plotEvent(pf, canvname);                
+            }
                         
             genParticles.clear();
             pfCHS.clear();
@@ -256,7 +275,7 @@ void readEvent( std::vector< fastjet::PseudoJet > &gen, std::vector< fastjet::Ps
             if (isPU == 0){
                 gen.push_back( curPseudoJet );            
             }
-            if ((isPU == 0) || (isPU == 1 && isCh == 0 && fabs(curPseudoJet.eta()) < 2.5)){
+            if ((isPU == 0) || (isPU == 1 && isCh == 0 && fabs(curPseudoJet.eta()) < 2.5) || (isPU == 1 && fabs(curPseudoJet.eta()) > 2.5)){
                 pfchs.push_back( curPseudoJet );
             }
             pf.push_back( curPseudoJet );        
@@ -382,4 +401,177 @@ void analyzeEvent( std::vector < fastjet::PseudoJet > constits, TTree &tree ){
 //    thisClustering_basic_->delete_self_when_unused();
 }
 
+void plotEvent( std::vector < fastjet::PseudoJet > constits, char* name ){
+    TH2F* h2d = new TH2F( "h2d",";#eta;#phi;e",100, -5,5, 100,0,2*TMath::Pi() );
+    for (unsigned int i = 0; i < constits.size(); i++){
+        int curBin = h2d->FindBin(constits[i].eta(),constits[i].phi());
+        h2d->SetBinContent( curBin, h2d->GetBinContent(curBin) + constits[i].e() );
+    }
+    TCanvas* can = new TCanvas("can","can",800,800);
+    h2d->Draw("BOX");
+    char oname[96];
+    sprintf(oname,"%s.eps",name);
+    can->SaveAs(oname);
+    delete h2d;
+    delete can;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+void setTDRStyle() {
+    TStyle *tdrStyle = new TStyle("tdrStyle","Style for P-TDR");
+    
+    // For the canvas:
+    tdrStyle->SetCanvasBorderMode(0);
+    tdrStyle->SetCanvasColor(kWhite);
+    tdrStyle->SetCanvasDefH(750); //Height of canvas
+    tdrStyle->SetCanvasDefW(1050); //Width of canvas
+    tdrStyle->SetCanvasDefX(0);   //POsition on screen
+    tdrStyle->SetCanvasDefY(0);
+    
+    // For the Pad:
+    tdrStyle->SetPadBorderMode(0);
+    // tdrStyle->SetPadBorderSize(Width_t size = 1);
+    tdrStyle->SetPadColor(kWhite);
+    tdrStyle->SetPadGridX(false);
+    tdrStyle->SetPadGridY(false);
+    tdrStyle->SetGridColor(0);
+    tdrStyle->SetGridStyle(3);
+    tdrStyle->SetGridWidth(1);
+
+// For the frame:
+tdrStyle->SetFrameBorderMode(0);
+tdrStyle->SetFrameBorderSize(1);
+tdrStyle->SetFrameFillColor(0);
+tdrStyle->SetFrameFillStyle(0);
+tdrStyle->SetFrameLineColor(1);
+tdrStyle->SetFrameLineStyle(1);
+tdrStyle->SetFrameLineWidth(1);
+
+// For the histo:
+// tdrStyle->SetHistFillColor(1);
+// tdrStyle->SetHistFillStyle(0);
+tdrStyle->SetHistLineColor(1);
+tdrStyle->SetHistLineStyle(0);
+tdrStyle->SetHistLineWidth(1);
+// tdrStyle->SetLegoInnerR(Float_t rad = 0.5);
+// tdrStyle->SetNumberContours(Int_t number = 20);
+
+tdrStyle->SetEndErrorSize(2);
+//  tdrStyle->SetErrorMarker(20);
+tdrStyle->SetErrorX(0.);
+
+tdrStyle->SetMarkerStyle(20);
+
+//For the fit/function:
+tdrStyle->SetOptFit(1);
+tdrStyle->SetFitFormat("5.4g");
+tdrStyle->SetFuncColor(2);
+tdrStyle->SetFuncStyle(1);
+tdrStyle->SetFuncWidth(1);
+
+//For the date:
+tdrStyle->SetOptDate(0);
+// tdrStyle->SetDateX(Float_t x = 0.01);
+// tdrStyle->SetDateY(Float_t y = 0.01);
+
+// For the statistics box:
+tdrStyle->SetOptFile(0);
+tdrStyle->SetOptStat(0); // To display the mean and RMS:   SetOptStat("mr");
+tdrStyle->SetStatColor(kWhite);
+tdrStyle->SetStatFont(42);
+tdrStyle->SetStatFontSize(0.010);
+tdrStyle->SetStatTextColor(1);
+tdrStyle->SetStatFormat("6.4g");
+tdrStyle->SetStatBorderSize(1);
+tdrStyle->SetStatH(0.25);
+tdrStyle->SetStatW(0.15);
+// tdrStyle->SetStatStyle(Style_t style = 1001);
+// tdrStyle->SetStatX(Float_t x = 0);
+// tdrStyle->SetStatY(Float_t y = 0);
+
+// Margins:
+tdrStyle->SetPadTopMargin(0.05);
+tdrStyle->SetPadBottomMargin(0.13);
+tdrStyle->SetPadLeftMargin(0.14);
+tdrStyle->SetPadRightMargin(0.04);
+
+// For the Global title:
+
+tdrStyle->SetOptTitle(0);
+tdrStyle->SetTitleFont(42);
+tdrStyle->SetTitleColor(1);
+tdrStyle->SetTitleTextColor(1);
+tdrStyle->SetTitleFillColor(10);
+tdrStyle->SetTitleFontSize(0.005);
+// tdrStyle->SetTitleH(0); // Set the height of the title box
+// tdrStyle->SetTitleW(0); // Set the width of the title box
+// tdrStyle->SetTitleX(0); // Set the position of the title box
+// tdrStyle->SetTitleY(0.985); // Set the position of the title box
+// tdrStyle->SetTitleStyle(Style_t style = 1001);
+// tdrStyle->SetTitleBorderSize(2);
+
+// For the axis titles:
+
+tdrStyle->SetTitleColor(1, "XYZ");
+tdrStyle->SetTitleFont(42, "XYZ");
+tdrStyle->SetTitleSize(0.06, "XYZ");
+// tdrStyle->SetTitleXSize(Float_t size = 0.02); // Another way to set the size?
+// tdrStyle->SetTitleYSize(Float_t size = 0.02);
+tdrStyle->SetTitleXOffset(0.9);
+tdrStyle->SetTitleYOffset(1.25);
+// tdrStyle->SetTitleOffset(1.1, "Y"); // Another way to set the Offset
+
+// For the axis labels:
+
+tdrStyle->SetLabelColor(1, "XYZ");
+tdrStyle->SetLabelFont(42, "XYZ");
+tdrStyle->SetLabelOffset(0.007, "XYZ");
+tdrStyle->SetLabelSize(0.05, "XYZ");
+
+// For the axis:
+
+tdrStyle->SetAxisColor(1, "XYZ");
+tdrStyle->SetStripDecimals(kTRUE);
+tdrStyle->SetTickLength(0.03, "XYZ");
+tdrStyle->SetNdivisions(505, "XYZ");
+tdrStyle->SetPadTickX(1);  // To get tick marks on the opposite side of the frame
+tdrStyle->SetPadTickY(1);
+
+// Change for log plots:
+tdrStyle->SetOptLogx(0);
+tdrStyle->SetOptLogy(0);
+tdrStyle->SetOptLogz(0);
+
+// Postscript options:
+tdrStyle->SetPaperSize(20.,20.);
+// tdrStyle->SetLineScalePS(Float_t scale = 3);
+// tdrStyle->SetLineStyleString(Int_t i, const char* text);
+// tdrStyle->SetHeaderPS(const char* header);
+// tdrStyle->SetTitlePS(const char* pstitle);
+
+// tdrStyle->SetBarOffset(Float_t baroff = 0.5);
+// tdrStyle->SetBarWidth(Float_t barwidth = 0.5);
+// tdrStyle->SetPaintTextFormat(const char* format = "g");
+// tdrStyle->SetPalette(Int_t ncolors = 0, Int_t* colors = 0);
+// tdrStyle->SetTimeOffset(Double_t toffset);
+// tdrStyle->SetHistMinimumZero(kTRUE);
+
+tdrStyle->cd();
+
+}
 
