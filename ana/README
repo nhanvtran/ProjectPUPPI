@@ -1,0 +1,14 @@
+## some simple instructions to start
+## will make it more easy/centralized in the future
+
+1. Install FastJet
+
+2. Initialize ROOT
+
+3. In "setupFastjet.C", you have to change to your local FJ installation 
+
+4. Compile and run
+$ root -l
+[] .x setupFastjet.C
+[] .L eventAnalysis.cc++
+[] eventAnalysis()
