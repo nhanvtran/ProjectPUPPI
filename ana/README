@@ -12,3 +12,11 @@ $ root -l
 [] .x setupFastjet.C
 [] .L eventAnalysis.cc++
 [] eventAnalysis()
+
+or
+
+$ root -l
+[] .x setupFastjet.C
+[] .L puppiContainer.cc++
+[] .L puppiAnalyzer.cc++
+[] puppiAnalyzer()
