@@ -16,6 +16,7 @@
 #include "TH3F.h"
 #include "TCanvas.h"
 #include "TStyle.h"
+#include "TEllipse.h"
 
 #include <fastjet/ClusterSequence.hh>
 #include <fastjet/GhostedAreaSpec.hh>
@@ -39,6 +40,8 @@ using namespace fastjet;
 
 // read in the file 
 ifstream fin;
+
+bool bPlotEvets = true;
 
 // mass quantities
 float jet_m_[10];
@@ -78,8 +81,8 @@ float eta_part;
 
 void readEvent( std::vector< fastjet::PseudoJet > &gen, std::vector< fastjet::PseudoJet > &pfchs, std::vector< fastjet::PseudoJet > &pf );
 //void clusterEvent( std::vector < fastjet::PseudoJet > constits, std::vector< float > pdgids, TTree &tree );
-void analyzeEvent( std::vector < fastjet::PseudoJet > constits, TTree &tree );
-void plotEvent( std::vector < fastjet::PseudoJet > genParticles, char* name );
+void analyzeEvent( std::vector < fastjet::PseudoJet > constits, TTree &tree, char* tag );
+void plotEvent( std::vector < fastjet::PseudoJet > genParticles, char* name, std::vector < fastjet::PseudoJet > jets);
 void setTDRStyle();
 
 void initVars(){
@@ -212,23 +215,27 @@ void eventAnalysis() {
 
         if (nEvts > 0){
             
+            char canvname[150];
+            sprintf( canvname, "displays/gen/dis_gen_%i", nEvts );
             initVars();
-            analyzeEvent( genParticles, *tree_gen_ );
+            analyzeEvent( genParticles, *tree_gen_, canvname );
+            sprintf( canvname, "displays/pfchs/dis_pfchs_%i", nEvts );
             initVars();
-            analyzeEvent( pfCHS, *tree_pfchs_ );                
+            analyzeEvent( pfCHS, *tree_pfchs_, canvname );   
+            sprintf( canvname, "displays/pf/dis_pf_%i", nEvts );                
             initVars();
-            analyzeEvent( pf, *tree_pf_ );   
+            analyzeEvent( pf, *tree_pf_, canvname );   
             
-            // plot event
-            if (nEvts == 1 || nEvts == 10){
-                char canvname[150];
-                sprintf( canvname, "displays/dis_gen_%i", nEvts );
-                plotEvent(genParticles, canvname);
-                sprintf( canvname, "displays/dis_pfchs_%i", nEvts );
-                plotEvent(pfCHS, canvname);
-                sprintf( canvname, "displays/dis_pf_%i", nEvts );                
-                plotEvent(pf, canvname);                
-            }
+//            // plot event
+//            if (nEvts == 1 || nEvts == 10){
+//                char canvname[150];
+//                sprintf( canvname, "displays/dis_gen_%i", nEvts );
+//                plotEvent(genParticles, canvname);
+//                sprintf( canvname, "displays/dis_pfchs_%i", nEvts );
+//                plotEvent(pfCHS, canvname);
+//                sprintf( canvname, "displays/dis_pf_%i", nEvts );                
+//                plotEvent(pf, canvname);                
+//            }
                         
             genParticles.clear();
             pfCHS.clear();
@@ -288,7 +295,7 @@ void readEvent( std::vector< fastjet::PseudoJet > &gen, std::vector< fastjet::Ps
 
 /////////////////////////////////////////////////////////////////////
 
-void analyzeEvent( std::vector < fastjet::PseudoJet > constits, TTree &tree ){
+void analyzeEvent( std::vector < fastjet::PseudoJet > constits, TTree &tree, char* tag ){
     
     // recluster on the fly....
     double rParam = 0.7;
@@ -350,6 +357,10 @@ void analyzeEvent( std::vector < fastjet::PseudoJet > constits, TTree &tree ){
     float jwj_PTMiss = HTmiss(constits);
     float jwj_PTMiss_trimmed1 = HTmiss_trim(constits);
     
+    // ------------------------
+    // plot event
+    if (bPlotEvets) plotEvent(constits, tag, out_jets_);
+    
     // ++++++++++++++++++++++++++++++++++++++++++++++++++++
     // FILL IN THE TREE
     
@@ -401,19 +412,37 @@ void analyzeEvent( std::vector < fastjet::PseudoJet > constits, TTree &tree ){
 //    thisClustering_basic_->delete_self_when_unused();
 }
 
-void plotEvent( std::vector < fastjet::PseudoJet > constits, char* name ){
+void plotEvent( std::vector < fastjet::PseudoJet > constits, char* name, std::vector < fastjet::PseudoJet > jets ){
+
     TH2F* h2d = new TH2F( "h2d",";#eta;#phi;e",100, -5,5, 100,0,2*TMath::Pi() );
     for (unsigned int i = 0; i < constits.size(); i++){
         int curBin = h2d->FindBin(constits[i].eta(),constits[i].phi());
         h2d->SetBinContent( curBin, h2d->GetBinContent(curBin) + constits[i].e() );
     }
-    TCanvas* can = new TCanvas("can","can",800,800);
+    
+    std::cout << "jets.size() = " << jets.size() << std::endl;
+    std::vector< TEllipse > circles;
+    for (unsigned int i = 0; i < jets.size(); i++){
+        circles.push_back( TEllipse(jets[i].eta(),jets[i].phi(),0.7) );
+    }
+    
+    TCanvas* can = new TCanvas("can","can",1000,800);
     h2d->Draw("BOX");
+    for (unsigned int i = 0; i < jets.size(); i++){
+        if (i == 0) circles[i].SetLineColor(2);
+        if (i == 1) circles[i].SetLineColor(4);        
+        if (i == 2) circles[i].SetLineColor(6);                
+        if (i == 3) circles[i].SetLineColor(7);                        
+        circles[i].SetFillStyle(0);
+        circles[i].Draw("sames");
+    }
     char oname[96];
     sprintf(oname,"%s.eps",name);
+    sprintf(oname,"%s.png",name);
     can->SaveAs(oname);
     delete h2d;
     delete can;
+    
 }
 
 
