@@ -49,11 +49,13 @@ std::vector<float> v_jet_m_;
 std::vector<float> v_jet_pt_;
 std::vector<float> v_jet_eta_;
 
+float p_isPU, p_px, p_py, p_pz, p_e, p_puppiW, p_cleansedW;
+
 /////////////////////////////////////////////////////////////////////
 // Helper functions
 /////////////////////////////////////////////////////////////////////
 void readEvent( std::vector< fastjet::PseudoJet > &allParticles, std::vector<int> &v_isPU, std::vector<int> &v_isCh );
-void analyzeEvent( std::vector < fastjet::PseudoJet > constits, TTree &tree, char* tag );
+void analyzeEvent( std::vector < fastjet::PseudoJet > constits, TTree &tree, char* tag, double vRparam );
 void plotEvent( std::vector < fastjet::PseudoJet > constits, char* name );
 
 
@@ -71,70 +73,127 @@ void addBranches( TTree &tree ){
     tree.Branch("v_jet_eta",&v_jet_eta_);    
 }
 
+void initParticleVars(){
+    p_isPU = -1.;
+    p_px = -1.;
+    p_py = -1.;
+    p_pz = -1.;
+    p_e = -1.;
+    p_puppiW = -1.;
+    p_cleansedW = -1.;            
+}
+
+void addParticleBranches( TTree &tree ){
+    tree.Branch("p_isPU",&p_isPU);
+    tree.Branch("p_px",&p_px);
+    tree.Branch("p_py",&p_py);
+    tree.Branch("p_pz",&p_pz);
+    tree.Branch("p_e",&p_e);
+    tree.Branch("p_puppiW",&p_puppiW);
+    tree.Branch("p_cleansedW",&p_cleansedW);    
+}
 
 /////////////////////////////////////////////////////////////////////
-void puppiAnalyzer() {
+void puppiAnalyzer( int maxEventsVal = 1e9, int PUscenario=20 ) {
         
     
     gROOT->ProcessLine("#include <vector>");    
     setTDRStyle();
             
     int nEvts = 0;
-    int maxEvents = 1000;
+    int maxEvents = maxEventsVal;
     
-    
-    TFile fout_("output/outtree_20.root", "RECREATE");
+    char tfname[150];
+    sprintf( tfname, "output/outtree_%i.root", PUscenario );    
+    TFile fout_(tfname, "RECREATE");
     TTree* tree_gen = new TTree("tree_gen", "tree_gen");
     TTree* tree_pf = new TTree("tree_pf", "tree_pf");
+    TTree* tree_pfchs = new TTree("tree_pfchs", "tree_pfchs");
     TTree* tree_pf_tr = new TTree("tree_pf_tr", "tree_pf_tr");
     TTree* tree_pf_cl = new TTree("tree_pf_cl", "tree_pf_cl");
-    
+    TTree* tree_pf_puppi = new TTree("tree_pf_puppi", "tree_pf_puppi");
+
     addBranches(*tree_gen);
     addBranches(*tree_pf);
+    addBranches(*tree_pfchs);
     addBranches(*tree_pf_tr);    
-    addBranches(*tree_pf_cl);        
+    addBranches(*tree_pf_cl);   
+    addBranches(*tree_pf_puppi);  
+    
+    TTree* tree_particles = new TTree("tree_particles", "tree_particles");
+    addParticleBranches(*tree_particles);  
+  
     
     std::vector < fastjet::PseudoJet > allParticles;
     std::vector < int > v_isPU;
     std::vector < int > v_isCh;
 
-    std::string filenameT = "/uscms_data/d2/ntran/physics/Jets/PUPPI/fromDaniele/samples/Zj_20.dat";
-    std::cout << "Processing " << filenameT << std::endl;
-    fin.open(filenameT.c_str());
+    char fname[150];
+    sprintf( fname, "/uscms_data/d2/ntran/physics/Jets/PUPPI/fromDaniele/samples/Zj_%i.dat", PUscenario );
+    std::cout << "Processing " << fname << std::endl;
+    fin.open(fname);
 
     while(true){
 
         readEvent( allParticles, v_isPU, v_isCh );
         
         puppiContainer curEvent(allParticles, v_isPU, v_isCh);
+        std::vector<fastjet::PseudoJet> genParticles = curEvent.genParticles();
+        std::vector<fastjet::PseudoJet> pfParticles = curEvent.pfParticles();
+        std::vector<fastjet::PseudoJet> pfchsParticles = curEvent.pfchsParticles();
         std::vector<fastjet::PseudoJet> trimmedParticles = curEvent.trimEvent();
-        std::vector<fastjet::PseudoJet> cleansedParticles = curEvent.cleanseEvent();
-        
+        std::vector<fastjet::PseudoJet> cleansedParticles = curEvent.cleanseEvent(0.3);
+        std::vector<fastjet::PseudoJet> puppiParticles = curEvent.puppiEvent(0.5,2.);
+
         if (nEvts > 0){
             
             char canvname[150];
             
-            if (nEvts < 10){
-                sprintf( canvname, "displays/v2/dis_gen_%i", nEvts );
-                plotEvent( curEvent.genParticles(), canvname );
-                sprintf( canvname, "displays/v2/dis_pf_%i", nEvts );
-                plotEvent( curEvent.pfParticles(), canvname );
-                sprintf( canvname, "displays/v2/dis_pf_tr_%i", nEvts );
+            if (nEvts < 10 and nEvts > 0){
+            
+                std::vector<float> puppiWeights = curEvent.getPuppiWeights();
+                std::vector<float> cleansedWeights = curEvent.getCleansedWeights();    
+                // fill weights
+                for (unsigned int a = 0; a < allParticles.size(); a++){
+                    p_isPU = v_isPU[a];
+                    p_px = allParticles[a].px();
+                    p_py = allParticles[a].py();
+                    p_pz = allParticles[a].pz();
+                    p_e = allParticles[a].e();
+                    p_puppiW = puppiWeights[a];
+                    p_cleansedW = cleansedWeights[a];            
+                    tree_particles->Fill();
+                }
+            
+                sprintf( canvname, "displays/dis_gen_%i_%i", nEvts, PUscenario );
+                plotEvent( genParticles, canvname );
+                sprintf( canvname, "displays/dis_pf_%i_%i", nEvts, PUscenario );
+                plotEvent( pfParticles, canvname );
+                sprintf( canvname, "displays/dis_pfchs_%i_%i", nEvts, PUscenario );
+                plotEvent( pfchsParticles, canvname );                
+                sprintf( canvname, "displays/dis_pf_tr_%i_%i", nEvts, PUscenario );
                 plotEvent( trimmedParticles, canvname );
-                sprintf( canvname, "displays/v2/dis_pf_cl_%i", nEvts );
+                sprintf( canvname, "displays/dis_pf_cl_%i_%i", nEvts, PUscenario );
                 plotEvent( cleansedParticles, canvname );
+                sprintf( canvname, "displays/dis_pf_puppi_%i_%i", nEvts, PUscenario );
+                plotEvent( puppiParticles, canvname );
+
             }
             
             sprintf( canvname, "dummy" );
             initVars();
-            analyzeEvent( curEvent.genParticles(), *tree_gen, canvname );
+            analyzeEvent( curEvent.genParticles(), *tree_gen, canvname, 0.7 );
             initVars();
-            analyzeEvent( curEvent.pfParticles(), *tree_pf, canvname );
+            analyzeEvent( curEvent.pfParticles(), *tree_pf, canvname, 0.7 );
             initVars();
-            analyzeEvent( trimmedParticles, *tree_pf_tr, canvname );
+            analyzeEvent( curEvent.pfchsParticles(), *tree_pfchs, canvname, 0.7 );
             initVars();
-            analyzeEvent( cleansedParticles, *tree_pf_cl, canvname );
-            
+            analyzeEvent( trimmedParticles, *tree_pf_tr, canvname, 0.7 );
+            initVars();
+            analyzeEvent( cleansedParticles, *tree_pf_cl, canvname, 0.7 );
+            initVars();
+            analyzeEvent( puppiParticles, *tree_pf_puppi, canvname, 0.7 );
+
             allParticles.clear();
             v_isPU.clear();
             v_isCh.clear();
@@ -151,8 +210,11 @@ void puppiAnalyzer() {
     fout_.cd();
     tree_gen->Write();
     tree_pf->Write();
+    tree_pfchs->Write();    
     tree_pf_tr->Write();
     tree_pf_cl->Write();
+    tree_pf_puppi->Write();
+    tree_particles->Write();
     fout_.Close();
     
 }
@@ -160,6 +222,9 @@ void puppiAnalyzer() {
 /////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////
 void readEvent( std::vector< fastjet::PseudoJet > &allParticles, std::vector<int> &v_isPU, std::vector<int> &v_isCh ){
+    
+    // hard-coded! 
+    float etaMax = 5.;
     
     float npart, px, py, pz, e, pdgid, isCh, isPU = 0;
     
@@ -173,7 +238,7 @@ void readEvent( std::vector< fastjet::PseudoJet > &allParticles, std::vector<int
         
         // fill vector of pseudojets
         fastjet::PseudoJet curPseudoJet( px, py, pz, e );
-        if (fabs(curPseudoJet.eta()) < 5){
+        if (fabs(curPseudoJet.eta()) < etaMax){
             allParticles.push_back( curPseudoJet );
             v_isPU.push_back(isPU);
             v_isCh.push_back(isCh);            
@@ -186,14 +251,22 @@ void readEvent( std::vector< fastjet::PseudoJet > &allParticles, std::vector<int
 
 void plotEvent( std::vector < fastjet::PseudoJet > constits, char* name ){
     
-    TH2F* h2d = new TH2F( "h2d",";#eta;#phi;e",100, -5,5, 100,0,2*TMath::Pi() );
+    double maxCell = 0;
+    
+    TH2F* h2d = new TH2F( "h2d",";#eta;#phi;e (GeV)",100, -5,5, 100,0,2*TMath::Pi() );
     for (unsigned int i = 0; i < constits.size(); i++){
         int curBin = h2d->FindBin(constits[i].eta(),constits[i].phi());
+        if (constits[i].e() > maxCell) maxCell = constits[i].e();
         h2d->SetBinContent( curBin, h2d->GetBinContent(curBin) + constits[i].e() );
     }
+    
+    //std::cout << "maxCell = " << maxCell << std::endl;
         
-    TCanvas* can = new TCanvas("can","can",1000,800);
-    h2d->Draw("BOX");
+    TCanvas* can = new TCanvas("can","can",1100,800);
+    h2d->SetMaximum( 700. );
+    h2d->SetMinimum( 1.e-4 );
+    h2d->Draw("COLZ");
+    can->SetLogz();
 
     char oname[96];
     sprintf(oname,"%s.eps",name);
@@ -204,12 +277,12 @@ void plotEvent( std::vector < fastjet::PseudoJet > constits, char* name ){
     
 }
 
-void analyzeEvent( std::vector < fastjet::PseudoJet > constits, TTree &tree, char* tag ){
+void analyzeEvent( std::vector < fastjet::PseudoJet > constits, TTree &tree, char* tag, double vRparam ){
     
     //std::cout << "constits.size() = " << constits.size() << std::endl;
     
     // recluster on the fly....
-    double rParam = 0.7;
+    double rParam = vRparam;
     fastjet::JetDefinition jetDef(fastjet::antikt_algorithm, rParam);    
     
     int activeAreaRepeats = 1;
@@ -219,7 +292,7 @@ void analyzeEvent( std::vector < fastjet::PseudoJet > constits, TTree &tree, cha
     fastjet::GhostedAreaSpec fjActiveArea(ghostEtaMax,activeAreaRepeats,ghostArea);
     fastjet::AreaDefinition fjAreaDefinition( fastjet::active_area, fjActiveArea );
     fastjet::ClusterSequenceArea* thisClustering_ = new fastjet::ClusterSequenceArea(constits, jetDef, fjAreaDefinition);
-    std::vector<fastjet::PseudoJet> out_jets_ = sorted_by_pt(thisClustering_->inclusive_jets(20.0));
+    std::vector<fastjet::PseudoJet> out_jets_ = sorted_by_pt(thisClustering_->inclusive_jets(25.0));
     
     // ++++++++++++++++++++++++++++++++++++++++++++++++++++
     // FILL IN THE TREE
@@ -235,7 +308,7 @@ void analyzeEvent( std::vector < fastjet::PseudoJet > constits, TTree &tree, cha
     tree.Fill();
     // ++++++++++++++++++++++++++++++++++++++++++++++++++++
     
-    thisClustering_->delete_self_when_unused();
+    if (out_jets_.size() > 0) thisClustering_->delete_self_when_unused();
 
 }
 
@@ -335,8 +408,8 @@ tdrStyle->SetStatW(0.15);
 // Margins:
 tdrStyle->SetPadTopMargin(0.05);
 tdrStyle->SetPadBottomMargin(0.13);
-tdrStyle->SetPadLeftMargin(0.14);
-tdrStyle->SetPadRightMargin(0.04);
+tdrStyle->SetPadLeftMargin(0.17);
+tdrStyle->SetPadRightMargin(0.17);
 
 // For the Global title:
 
@@ -398,6 +471,9 @@ tdrStyle->SetPaperSize(20.,20.);
 // tdrStyle->SetPalette(Int_t ncolors = 0, Int_t* colors = 0);
 // tdrStyle->SetTimeOffset(Double_t toffset);
 // tdrStyle->SetHistMinimumZero(kTRUE);
+
+tdrStyle->SetPalette(1);
+
 
 tdrStyle->cd();
 

@@ -15,172 +15,118 @@ ROOT.gStyle.SetPadLeftMargin(0.16);
 
 ############################################################
 
+def getmax( hs ):
+    max = -999;
+    for i in range(len(hs)):
+        if hs[i] .GetMaximum() > max: max = hs[i].GetMaximum();
+    return max;
+
 if __name__ == '__main__':
 
-    file = ROOT.TFile("../output/outtree_20.root");
+
+    file = ROOT.TFile("../output/outtree_80.root");
     tree_gen = file.Get("tree_gen");
     tree_pf = file.Get("tree_pf");
+    tree_pfchs = file.Get("tree_pfchs");
     tree_pf_tr = file.Get("tree_pf_tr");    
     tree_pf_cl = file.Get("tree_pf_cl");    
+    tree_pf_puppi = file.Get("tree_pf_puppi");    
     
-    types = ["gen","pf","pf_tr","pf_cl"];
+    types = ["gen","pf","pfchs","pf_tr","pf_cl","pf_puppi"];
+    trees = [tree_gen, tree_pf, tree_pfchs, tree_pf_tr, tree_pf_cl,tree_pf_puppi];
+    colors = [1,2,4,6,7,2];
+    linestyles = [1,1,1,1,1,2];    
+    nTypes = len(types);
     
+    print "tree_gen.GetEntries() = ",tree_gen.GetEntries();
+    print "tree_pf.GetEntries() = ",tree_pf.GetEntries();
+    print "tree_pfchs.GetEntries() = ",tree_pfchs.GetEntries();
+    print "tree_pf_tr.GetEntries() = ",tree_pf_tr.GetEntries();
+    print "tree_pf_cl.GetEntries() = ",tree_pf_cl.GetEntries();
+    print "tree_pf_puppi.GetEntries() = ",tree_pf_puppi.GetEntries();
+
+    ## -----------------------------
+    ## declare histograms
     h_nJets = [];
     h_jet_mass = [];    
-    h_jet_pt = [];        
-    for i in range(4):
-        h_nJets.append(ROOT.TH1F("h_nJets_"+types[i],"; n jets ;n.d.",10,0,10));
+    h_jet_pt = [];
+    h_mass_corr = [];    
+    for i in range(nTypes):
+        h_nJets.append(ROOT.TH1F("h_nJets_"+types[i],"; n jets ;n.d.",50,0,50));
         h_jet_mass.append(ROOT.TH1F("h_jet_mass_"+types[i],"; mass ;n.d.",20,0,200));
-        h_jet_pt.append(ROOT.TH1F("h_jet_pt"+types[i],"; pT ;n.d.",20,0,800));         
+        h_jet_pt.append(ROOT.TH1F("h_jet_pt_"+types[i],"; pT ;n.d.",20,0,800));         
+        h_mass_corr.append(ROOT.TH2F("h_mass_corr_"+types[i],"; true mass; reco mass",100,0,200,100,0,200));
 
-    trees = [tree_gen, tree_pf, tree_pf_tr, tree_pf_cl];
-
-    for j in range(4):
+    ## -----------------------------
+    ## fill histograms    
+    for j in range(nTypes):
         
         for i in range(tree_gen.GetEntries()):
             trees[j].GetEntry(i);
             h_nJets[j].Fill( trees[j].njets );
             h_jet_mass[j].Fill( trees[j].v_jet_m[0] );
-            h_jet_pt[j].Fill( trees[j].v_jet_pt[0] );                    
+            h_jet_pt[j].Fill( trees[j].v_jet_pt[0] );        
             
+    for j in range(trees[0].GetEntries()):
+        for i in range(nTypes): trees[i].GetEntry(j);
+        for i in range(nTypes):
+            h_mass_corr[i].Fill(trees[0].v_jet_m[0],trees[i].v_jet_m[0]);
             
-    for j in range (4):
+    ## -----------------------------
+    ## properties of histograms            
+    for j in range (nTypes):
         h_nJets[j].Scale(1./h_nJets[j].Integral());
         h_jet_mass[j].Scale(1./h_jet_mass[j].Integral());
         h_jet_pt[j].Scale(1./h_jet_pt[j].Integral());
 
-        h_nJets[j].SetLineColor(j+1);
-        h_jet_mass[j].SetLineColor(j+1);
-        h_jet_pt[j].SetLineColor(j+1);
+        h_nJets[j].SetLineColor(colors[j]);
+        h_jet_mass[j].SetLineColor(colors[j]);
+        h_jet_pt[j].SetLineColor(colors[j]);
+        h_nJets[j].SetLineWidth(2);
+        h_jet_mass[j].SetLineWidth(2);
+        h_jet_pt[j].SetLineWidth(2);
         
+        h_nJets[j].SetLineStyle(linestyles[j]);
+        h_jet_mass[j].SetLineStyle(linestyles[j]);
+        h_jet_pt[j].SetLineStyle(linestyles[j]);
         
+    leg = ROOT.TLegend(0.7,0.7,0.9,0.9);
+    leg.SetBorderSize(0);
+    leg.SetFillStyle(0);
+    for j in range(nTypes):
+        leg.AddEntry(h_nJets[j],types[j],"l");
+
     # plot
     can_nJets = ROOT.TCanvas("can_nJets","can_nJets",800,800);
+    h_nJets[0].SetMaximum( 1.2*getmax(h_nJets) );
     h_nJets[0].Draw();
-    for j in range (1,4): h_nJets[j].Draw("sames");
+    for j in range (1,nTypes): h_nJets[j].Draw("sames");
+    leg.Draw();
     can_nJets.SaveAs("figs/can_nJets.eps");
 
     can_jet_mass = ROOT.TCanvas("can_jet_mass","can_jet_mass",800,800);
+    h_jet_mass[0].SetMaximum( 1.2*getmax(h_jet_mass) );
     h_jet_mass[0].Draw();
-    for j in range (1,4): h_jet_mass[j].Draw("sames");
+    for j in range (1,nTypes): h_jet_mass[j].Draw("sames");
+    leg.Draw();    
     can_jet_mass.SaveAs("figs/can_jet_mass.eps");
 
     can_jet_pt = ROOT.TCanvas("can_jet_pt","can_jet_pt",800,800);
+    h_jet_pt[0].SetMaximum( 1.2*getmax(h_jet_pt) );
     h_jet_pt[0].Draw();
-    for j in range (1,4): h_jet_pt[j].Draw("sames");
+    for j in range (1,nTypes): h_jet_pt[j].Draw("sames");
+    leg.Draw();    
     can_jet_pt.SaveAs("figs/can_jet_pt.eps");
 
-                
-#    
-#    # jet vars
-#    vars = ["jet_m","jet_m_trimmed1","jet_m_pruned1",
-#            "jet_pt","jet_pt_trimmed1","jet_pt_pruned1",
-#            "jet_area","jet_area_trimmed1","jet_area_pruned1",
-#            "jet_nconstituents"]
-#    vars_x = ["m","mtrimmed1","mpruned1","pt","pt_trimmed1","pt_pruned1","area","area_trimmed1","area_pruned1","nconstituents"]
-#    vars_nbin = [20]*10;
-#    vars_lo = [   0,   0,   0,   0,   0,   0,    0,   0,  0,    0 ];
-#    vars_hi = [ 200, 200, 200, 800, 800, 800,    2,   2,  2,  200 ];
-#    # event vars
-#    evars = ["jet_njets",
-#             "jet_HT", "jet_PTMiss","jet_HT_trimmed1", "jet_PTMiss_trimmed1",
-#             "prt_HT","prt_PTMiss",
-#             "jwj_Nj","jwj_Nj_trimmed1",
-#             "jwj_HT","jwj_HT_trimmed1","jwj_PTMiss","jwj_PTMiss_trimmed1"];
-#    evars_x = ["jet_njets",
-#              "jet_HT", "jet_PTMiss","jet_HT_trimmed1", "jet_PTMiss_trimmed1",
-#              "prt_HT","prt_PTMiss",
-#              "jwj_Nj","jwj_Nj_trimmed1",
-#              "jwj_HT","jwj_HT_trimmed1","jwj_PTMiss","jwj_PTMiss_trimmed1"]
-#    evars_nbin = [20]*13;
-#    evars_lo = [0,0,0,0,0,
-#                0,0,0,0,0,
-#                0,0,0];
-#    evars_hi = [40, 
-#                1500, 1500, 1500, 1500, 
-#                1500, 1500,
-#                  40,   40,
-#                1500, 1500, 1500, 1500];
-#    
-#    h_gen = [];
-#    h_pfchs = [];
-#    h_pf = [];
-#    
-#    for i in range(len(vars)):
-#        h_gen.append( ROOT.TH1F("hgen_"+vars[i],";"+vars_x[i]+";n.d.",vars_nbin[i],vars_lo[i],vars_hi[i]) );
-#        h_pfchs.append( ROOT.TH1F("hpfchs_"+vars[i],";"+vars_x[i]+";n.d.",vars_nbin[i],vars_lo[i],vars_hi[i]) );   
-#        h_pf.append( ROOT.TH1F("hpf_"+vars[i],";"+vars_x[i]+";n.d.",vars_nbin[i],vars_lo[i],vars_hi[i]) );   
-#    for i in range(len(evars)):
-#        h_gen.append( ROOT.TH1F("hgen_"+evars[i],";"+evars_x[i]+";n.d.",evars_nbin[i],evars_lo[i],evars_hi[i]) );
-#        h_pfchs.append( ROOT.TH1F("hpfchs_"+evars[i],";"+evars_x[i]+";n.d.",evars_nbin[i],evars_lo[i],evars_hi[i]) );   
-#        h_pf.append( ROOT.TH1F("hpf_"+evars[i],";"+evars_x[i]+";n.d.",evars_nbin[i],evars_lo[i],evars_hi[i]) );   
-#    
-#    for i in range(tree_gen.GetEntries()):
-#        
-#        tree_gen.GetEntry(i);
-#        tree_pfchs.GetEntry(i);
-#        tree_pf.GetEntry(i);        
-#        for j in range(len(vars)):
-#            h_gen[j].Fill( getattr( tree_gen, vars[j] )[0] );             
-#            h_pfchs[j].Fill( getattr( tree_pfchs, vars[j] )[0] );             
-#            h_pf[j].Fill( getattr( tree_pf, vars[j] )[0] );             
-#        for j in range(len(vars),len(vars)+len(evars)):
-#            kk = j - len(vars);
-#            h_gen[j].Fill( getattr( tree_gen, evars[kk] ) );             
-#            h_pfchs[j].Fill( getattr( tree_pfchs, evars[kk] ) );             
-#            h_pf[j].Fill( getattr( tree_pf, evars[kk] ) );             
-#   
-#        
-#    # now plot
-#
-#    ##### plot
-#    # scale and color
-#    for j in range(len(vars)+len(evars)):
-#        if h_gen[j].Integral() > 0:   h_gen[j].Scale( 1./h_gen[j].Integral() );
-#        if h_pfchs[j].Integral() > 0: h_pfchs[j].Scale( 1./h_pfchs[j].Integral() );
-#        if h_pf[j].Integral() > 0:    h_pf[j].Scale( 1./h_pf[j].Integral() );
-#        
-#        h_pfchs[j].SetLineColor( 2 );
-#        h_pf[j].SetLineColor( 4 );
-#
-#    # on canvas
-#    for j in range(len(vars)+len(evars)):
-#        
-#        tmpcan = ROOT.TCanvas("can"+str(j),"can"+str(j),800,800);
-#        h_gen[j].SetMaximum( 1.2*max( h_gen[j].GetMaximum(), h_pfchs[j].GetMaximum(), h_pf[j].GetMaximum() ) );
-#        h_gen[j].SetMinimum( 0 );        
-#        h_gen[j].Draw();
-#        h_pfchs[j].Draw("sames");
-#        h_pf[j].Draw("sames");    
-#        if j < len(vars):
-#            tmpcan.SaveAs("figs/"+vars[j]+".eps");
-#            tmpcan.SaveAs("figs/"+vars[j]+".png");        
-#        else:
-#            tmpcan.SaveAs("figs/"+evars[j-len(vars)]+".eps");
-#            tmpcan.SaveAs("figs/"+evars[j-len(vars)]+".png");
-
-    ##----------------------------------------------------
-    ##----------------------------------------------------
-
-#    tree_particles = file.Get("tree_particles_");    
-#    h_particles_eta = ROOT.TH1F("h_particles_eta","; eta; count",30, -6,6 );
-#    h_particles_pt = ROOT.TH1F("h_particles_pt","; p_{T} (GeV); count",20, 0,20 );
-#
-#    print "tree_particles.GetEntries() = ",tree_particles.GetEntries()
-#    for i in range(tree_particles.GetEntries()):
-#        if i%100000 == 0: print "i",i
-#        tree_particles.GetEntry(i);
-#        h_particles_eta.Fill( tree_particles.eta );
-#        h_particles_pt.Fill( tree_particles.pt );        
-#
-#    cpart_eta = ROOT.TCanvas("cpart_eta","cpart_eta",800,800);
-#    h_particles_eta.Draw();
-#    cpart_eta.SaveAs("plots/cpart_eta.eps");
-#        
-#    cpart_pt = ROOT.TCanvas("cpart_pt","cpart_pt",800,800);
-#    h_particles_pt.Draw();
-#    cpart_pt.SaveAs("plots/cpart_pt.eps");
-
-
-
+    for i in range(nTypes):
+        print "corr factor ",i," = ", h_mass_corr[i].GetCorrelationFactor();   
+        cantmp = ROOT.TCanvas("cancorr"+str(i),"cancorr"+str(i),800,800);
+        h_mass_corr[i].Draw("box");
+        ban1 = ROOT.TLatex(0.25,0.80,("r = "+str(h_mass_corr[i].GetCorrelationFactor()) ));
+        ban1.SetNDC()
+        ban1.SetTextSize(0.035)
+        ban1.Draw();
+        cantmp.SaveAs("figs/can_mcorr_"+types[i]+".eps");
+        
+        
         
