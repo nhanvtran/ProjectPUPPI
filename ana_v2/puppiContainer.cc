@@ -1,6 +1,7 @@
 #include "puppiContainer.hh"
 
 #include "fastjet/internal/base.hh"
+#include "Math/ProbFunc.h"
 
 using namespace std;
 using namespace fastjet;
@@ -13,21 +14,23 @@ puppiContainer::puppiContainer(std::vector<fastjet::PseudoJet> inParticles, std:
     _pfParticles = inParticles;
     _isPU = isPU;
     _isCh = isCh;
+    _isPFCHS.resize(0);
     
     _genParticles.resize(0);
     _pfchsParticles.resize(0);    
     _neutrals.resize(0);
     _chargedLV.resize(0);    
     _chargedPU.resize(0);    
+    
         
     double etaTracker = 5.;
     
     for (unsigned int i = 0; i < _pfParticles.size(); i++){
         float weightGEN = 0.;
         float weightPFCHS = 0.;
-    
+        
         // fill vector of pseudojets
-        if (fabs(_pfParticles[i].eta()) < 5){        
+        if (fabs(_pfParticles[i].eta()) < 5 && _pfParticles[i].pt() > 0.2){        
             
             PseudoJet curjet(_pfParticles[i].px(), _pfParticles[i].py(), _pfParticles[i].pz(), _pfParticles[i].e());
             
@@ -56,10 +59,14 @@ puppiContainer::puppiContainer(std::vector<fastjet::PseudoJet> inParticles, std:
             if (weightPFCHS == 0){
                 _chargedPU.push_back( curjet );
             }
+            
+            _isPFCHS.push_back( weightPFCHS );
         }
     }
     
     puppiWeights.resize(0);
+    puppiWeights_chLV.resize(0);
+    puppiWeights_combined.resize(0);
     cleansedWeights.resize(0);    
 }
 
@@ -98,21 +105,21 @@ std::vector<fastjet::PseudoJet> puppiContainer::trimEvent(double vRjet, double v
 }
 
 std::vector<fastjet::PseudoJet> puppiContainer::cleanseEvent( double Rsub ){
-
+    
     std::vector<PseudoJet> answer;
     answer.resize(0);
     cleansedWeights.resize(0);    
-
+    
     // -- event cleansing parameters -- 
     double Rsub_cleansing = Rsub;
-
+    
     std::vector<PseudoJet> charged_PU;
     std::vector<PseudoJet> charged_LV;
     for(unsigned int i = 0; i<_pfParticles.size(); i++){
         if(_isPU[i] == 1 && _isCh[i] == 1) charged_PU.push_back(_pfParticles[i]);
         if(_isPU[i] == 0 && _isCh[i] == 1) charged_LV.push_back(_pfParticles[i]);
     }    
-
+    
     for(unsigned int i=0; i<_pfParticles.size(); i++){
         double weight1 = 0.0;
         
@@ -166,82 +173,97 @@ std::vector<fastjet::PseudoJet> puppiContainer::puppiEvent_V1( double Rsub, doub
 }
 
 std::vector<fastjet::PseudoJet> puppiContainer::puppiEvent(int iPU){
-    
+            
     double Rsub = 0.3;///Using 0.3 radius
     std::vector<PseudoJet> answer;
     answer.resize(0);
-    // for shape puppi
     std::vector<double> lVals;
-    double lAvg  = 0; 
-    // for charged LV puppi
-    std::vector<double> lVals_chLV;
-    double lAvg_chLV  = 0; 
-    // for charged PU puppi
-    std::vector<double> lVals_chPU;
-    double lAvg_chPU  = 0; 
+    std::vector<double> lValsPV;
+    double min_lVals = 999;
+    double min_lValsPV = 999;
     
+    std::vector<double> lValsAPV;
+    std::vector<double> lValsAPU;
+    double lAvgPV = 0; 
+    double lAvgPU = 0; 
     for(unsigned int i=0; i<_pfParticles.size(); i++){
-        //if((!_isPU[i] && iPU==0) || ( _isPU[i] && iPU==1)) {
-        //    lVals.push_back(0.);
-        //    continue;
-        //}
-        double puppi_Rsub = puppi_within_R(_pfParticles,_pfParticles[i],Rsub,false);            
-        double puppi_Rsub_chLV = puppi_within_R(_chargedLV,_pfParticles[i],Rsub,false);            
-        double puppi_Rsub_chPU = puppi_within_R(_chargedPU,_pfParticles[i],Rsub,false);            
-
-        //std::cout << "puppi_Rsub = " << puppi_Rsub << std::endl;
+                
+        double puppi_Rsub = puppi_within_R(_pfchsParticles,_pfParticles[i],Rsub,false);      
+        double puppi_RsubPV = puppi_within_R(_chargedLV,_pfParticles[i],Rsub,false);   
+        
+        // downweighting for soft particles near hard particles
+        double pt_Rsub = pt_within_R(_pfParticles,_pfParticles[i],Rsub);
+        double weightI = _pfParticles[i].pt()/pt_Rsub;
+        
+        puppi_Rsub*=weightI;
+        puppi_RsubPV*=weightI;        
         
         lVals.push_back(puppi_Rsub);
-        lAvg += lVals[i];            
-
-        lVals_chLV.push_back(puppi_Rsub_chLV);
-        lAvg_chLV += lVals_chLV[i];            
-
-        lVals_chPU.push_back(puppi_Rsub_chPU);
-        lAvg_chPU += lVals_chPU[i];            
+        lValsPV.push_back(puppi_RsubPV);
+//        std::cout << "puppi_Rsub = " << puppi_Rsub << std::endl;
+        if (puppi_Rsub < min_lVals) min_lVals = puppi_Rsub;
+        if (puppi_RsubPV < min_lValsPV) min_lValsPV = puppi_RsubPV;        
         
         //Was applying a pt cut
-        //if(_pfParticles[i].pt() > 0.2) { 
-        //lVals.push_back(puppi_Rsub);
-        //    lAvg  += puppi_Rsub;
-        // }
+        if(_pfParticles[i].pt() > 0.2 && _isCh[i]) { 
+            if(_isPU[i]) lValsAPV.push_back(puppi_RsubPV);
+            if(_isPU[i]) lValsAPU.push_back(puppi_Rsub);
+        }
+            
     }
+     
+//    //shift to make positive-definite
+//    for(int i0 = 0; i0 < lVals.size(); i0++) { 
+//        lVals[i0] -= min_lVals;
+//        lValsPV[i0] -= min_lValsPV;
+//    }
     
-    std::cout << "lVals.size() = " << lVals.size() << ", _pfParticles.size() = " << _pfParticles.size() << ", lAvg = " << lAvg << std::endl;
-    lAvg /= lVals.size();
-    double lRMS = 0; 
-    for(int i0 = 0 ;i0 < lVals.size(); i0++) {lRMS += (lVals[i0]-lAvg)*(lVals[i0]-lAvg);}
-    lRMS/=lVals.size(); 
-    std::cout << "Avg = " << lAvg << ", RMS = " << lRMS << std::endl;
-
-    lAvg_chLV /= lVals_chLV.size();
-    double lRMS_chLV = 0; 
-    for(int i0 = 0 ;i0 < lVals_chLV.size(); i0++) {lRMS_chLV += (lVals_chLV[i0]-lAvg_chLV)*(lVals_chLV[i0]-lAvg_chLV);}
-    lRMS_chLV/=lVals_chLV.size(); 
-
-    lAvg_chPU /= lVals_chPU.size();
-    double lRMS_chPU = 0; 
-    for(int i0 = 0 ;i0 < lVals_chPU.size(); i0++) {lRMS_chPU += (lVals_chPU[i0]-lAvg_chPU)*(lVals_chPU[i0]-lAvg_chPU);}
-    lRMS_chPU/=lVals_chPU.size(); 
+    //Median
+    std::sort (lValsAPV.begin(),lValsAPV.end());  
+    std::sort (lValsAPU.begin(),lValsAPU.end());  
+    lAvgPV = lValsAPV[int(lValsAPV.size()/2.+0.5)];
+    lAvgPU = lValsAPU[int(lValsAPU.size()/2.+0.5)];
+    //RMS
+    double lRMSPU = 0; 
+    for(int i0 = 0 ;i0 < lValsAPU.size(); i0++) {lRMSPU += (lValsAPU[i0]-lAvgPU)*(lValsAPU[i0]-lAvgPU);}
+    double lRMSPV = 0; 
+    for(int i0 = 0 ;i0 < lValsAPV.size(); i0++) {lRMSPV += (lValsAPV[i0]-lAvgPV)*(lValsAPV[i0]-lAvgPV);}
+    if(lValsAPV.size() > 0) lRMSPV/=lValsAPV.size(); 
+    if(lValsAPU.size() > 0) lRMSPU/=lValsAPU.size(); 
+        
+//    std::cout << "min_lVals = " << min_lVals << std::endl;
+//    std::cout << "min_lValsPV = " << min_lValsPV << std::endl;
     
+    //Particles
     for(int i0 = 0; i0 < lVals.size(); i0++) { 
-        double pWeight = lVals[i0]; 
-        double pWeight_chLV = lVals_chLV[i0]; 
-        double pWeight_chPU = lVals_chPU[i0]; 
         
-        pWeight = erf(-(lVals[i0] - lAvg) /sqrt(lRMS));
-        pWeight_chLV = erf(-(lVals_chLV[i0] - lAvg_chLV) /sqrt(lRMS_chLV));
-        pWeight_chPU = erf(-(lVals_chPU[i0] - lAvg_chPU) /sqrt(lRMS_chPU));
+        double pWeight = lVals[i0];
+        double pWeight1 = lValsPV[i0];
+        double pWeight2 = lValsPV[i0];
         
-        //std::cout << "pWeight = " << pWeight << std::endl;
-        PseudoJet curjet( pWeight*_pfParticles[i0].px(), pWeight*_pfParticles[i0].py(), pWeight*_pfParticles[i0].pz(), pWeight*_pfParticles[i0].e());
-        answer.push_back( curjet );
-        puppiWeights.push_back( pWeight );
-        puppiWeights_chLV.push_back( pWeight_chLV );
-        puppiWeights_chPU.push_back( pWeight_chPU );
-    }
-    return answer; 
+        double chiWeight1 = (lVals[i0]-lAvgPU)/sqrt(lRMSPU)*((lVals[i0]-lAvgPU)/sqrt(lRMSPU)); 
+        double chiWeight2 = (lValsPV[i0]-lAvgPV)/sqrt(lRMSPV)*(lValsPV[i0]-lAvgPV)/sqrt(lRMSPV); 
+        pWeight = ROOT::Math::chisquared_cdf(chiWeight1+chiWeight2,2.);
+        pWeight1 = ROOT::Math::chisquared_cdf(chiWeight1,1.);
+        pWeight2 = ROOT::Math::chisquared_cdf(chiWeight2,1.);
 
+        //std::cout << "pWeight2 = " << pWeight2 << std::endl;
+        
+        puppiWeights.push_back(pWeight1);
+        puppiWeights_chLV.push_back(pWeight2);    
+        puppiWeights_combined.push_back(pWeight);    
+        
+        if (pWeight2 > 0.95){
+            //pWeight2 = 1.;
+            PseudoJet curjet(pWeight2*_pfParticles[i0].px(), 
+                             pWeight2*_pfParticles[i0].py(), 
+                             pWeight2*_pfParticles[i0].pz(), 
+                             pWeight2*_pfParticles[i0].e());
+            answer.push_back( curjet );
+        }
+    }
+    
+    return answer;
 }
 
 
@@ -252,7 +274,7 @@ double puppiContainer::pt_within_R(const vector<PseudoJet> & particles, const Ps
     vector<PseudoJet> near_particles = sel(particles);
     double answer = 0.0;
     //std::cout << "near particles (pt) = " << near_particles.size() << std::endl;
-
+    
     for(unsigned int i=0; i<near_particles.size(); i++){
         answer += near_particles[i].pt();
     }
@@ -260,7 +282,7 @@ double puppiContainer::pt_within_R(const vector<PseudoJet> & particles, const Ps
 }
 
 double puppiContainer::ktWeight_within_R(const vector<PseudoJet> & particles, const PseudoJet& centre, double R, double exponent){
-
+    
     fastjet::Selector sel = fastjet::SelectorCircle(R);
     sel.set_reference(centre);
     vector<PseudoJet> near_particles = sel(particles);
@@ -281,5 +303,22 @@ double puppiContainer::ktWeight_within_R(const vector<PseudoJet> & particles, co
     }
     return(sumWeight);
 }
+
+double puppiContainer::getAverage(const vector<double> & particles){
+    //std::cout << "get mean" << std::endl;
+    double ltotal = 0.;
+    for(int i0 = 0 ;i0 < particles.size(); i0++) {ltotal += particles[i0];}
+    return ltotal/particles.size();
+}
+
+double puppiContainer::getRMS(const vector<double> & particles){
+    
+    double average = getAverage( particles );
+    double lRMS = 0;
+    for(int i0 = 0 ;i0 < particles.size(); i0++) {lRMS += (particles[i0]-average)*(particles[i0]-average);}
+    return lRMS/particles.size(); 
+}
+
+
 //FASTJET_END_NAMESPACE
 

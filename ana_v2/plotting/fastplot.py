@@ -15,6 +15,7 @@ ROOT.gROOT.ProcessLine(".L ~/tdrstyle.C");
 ROOT.setTDRStyle();
 ROOT.gStyle.SetPadTopMargin(0.09);
 ROOT.gStyle.SetPadLeftMargin(0.16);
+ROOT.gStyle.SetPadRightMargin(0.16);
 ROOT.gStyle.SetPalette(1);
 ROOT.gStyle.SetErrorX(0.5);
 
@@ -68,7 +69,7 @@ def makeROCFromHisto(hsig,hbkg,LtoR):
     tg = ROOT.TGraph( nbins, xval, yval );
     return tg;    
     
-def makeCanvas(hists, names, canname):
+def makeCanvas(hists, names, canname, isLog=False):
     
     directory = "plots";
     colors = [2,4,1,6,7];
@@ -91,18 +92,25 @@ def makeCanvas(hists, names, canname):
     for i in range(1,len(hists)):
         hists[i].Draw("sames");
     leg.Draw();
+    if isLog: 
+        ROOT.gPad.SetLogy();
+        hists[0].SetMinimum( 1 );
     can.SaveAs(directory+"/"+canname+".eps");
     can.SaveAs(directory+"/"+canname+".png");
+
 
     for hist in hists:
         hist.Scale(1./hist.Integral());
         
 def makeSingleHistCanvas( h_2D ):
     
-    directory = "figs_bin"+str(bin);
+    directory = "plots";
 
-    cant = ROOT.TCanvas("cant","cant",800,800);
+    h_2D.Scale( 1./h_2D.Integral() );
+    
+    cant = ROOT.TCanvas("cant","cant",1000,800);
     h_2D.Draw("colz");
+    ROOT.gPad.SetLogz();
     cant.SaveAs(directory+"/"+h_2D.GetName()+".png");
     cant.SaveAs(directory+"/"+h_2D.GetName()+".eps");
     
@@ -110,7 +118,7 @@ def drawROCs(rocs, legtext, name):
         
     legTextSize=0.037;
         
-    colors = [1,2,4,6,7,3,8,10]
+    colors = [1,2,4,6,7,3,5,10]
 
     banner = TLatex(0.25,0.92,("Daniele Preliminary Simulation, #sqrt{s} = 8 TeV, Z+jets"));
     banner.SetNDC()
@@ -121,24 +129,46 @@ def drawROCs(rocs, legtext, name):
     leg.SetFillStyle( 0 );
     leg.SetNColumns(1);
     for i in range(len(rocs)):
+        rocs[i].SetLineWidth(2);
         leg.AddEntry( rocs[i], legtext[i], "l" );
     
-    canRoc = ROOT.TCanvas("canRoc","canRoc",800,800);    
+    canRoc = ROOT.TCanvas("canRoc","canRoc",1000,800);    
     canRoc.cd();
-    hrl = canRoc.DrawFrame(0,0,1.0,1.0);
+    hrl = canRoc.DrawFrame(0.0,0.0,1.0,1.0);
     hrl.GetXaxis().SetTitle("#epsilon_{sig}");
     hrl.GetYaxis().SetTitle("1 - #epsilon_{bkg}");    
     for i in range(len(rocs)):
         rocs[i].SetLineColor( colors[i] );
         rocs[i].Draw();
     leg.Draw();
-    banner.Draw();
-        
+    #banner.Draw();
+#    ROOT.gPad.SetLogy();
+#    ROOT.gPad.SetLogx();
+            
     canRoc.SaveAs( "plots/"+name+".eps" );
     canRoc.SaveAs( "plots/"+name+".png" );
     canRoc.SaveAs( "plots/"+name+".pdf" );    
     del canRoc;
     
+def findEqualTailProbabilities(h1,h2):
+
+    tailProbDiff = 9999;
+    iEqual = -1.;
+    nbinsX = h1.GetNbinsX();
+    
+    nTotal1 = h1.GetEntries();
+    nTotal2 = h2.GetEntries();
+    
+    for i in range(1,nbinsX+1):
+        int1 = h1.Integral(1,i);    
+        int2 = h2.Integral(i,nbinsX+1);        
+        print "val = ", h1.GetBinCenter( i ), "int1 = ", int1, ", int2 = ", int2, ", tailProbDiff = ", tailProbDiff
+        if math.fabs(int1-int2) < tailProbDiff: 
+            tailProbDiff = math.fabs(int1-int2)
+            iEqual = i;
+    
+    return h1.GetBinCenter( iEqual );
+
 ############################################################
 
 if __name__ == '__main__':
@@ -146,96 +176,108 @@ if __name__ == '__main__':
     file = ROOT.TFile("../output/outtree_80.root");
     tree = file.Get("tree_particles");
     
-    hlo = -1;
-    hhi =  1;
-    
-    weights_PU = ROOT.TH1F("weights_PU","; weight; count", 100, hlo, hhi);
-    weights_LV = ROOT.TH1F("weights_LV","; weight; count", 100, hlo, hhi);        
+    hlo =  -0.5;
+    hhi =  1.5;
+    nbins = 1000;
+#    
+#    weights_PU_all = ROOT.TH1F("weights_PU_all",";weights;count",100,-10,10);
+#    weights_LV_all = ROOT.TH1F("weights_LV_all",";weights;count",100,-10,10);
+#
+#    weights_PU_chLV = ROOT.TH1F("weights_PU_chLV",";weights;count",100,-100,100);
+#    weights_LV_chLV = ROOT.TH1F("weights_LV_chLV",";weights;count",100,-100,100);
+#
+#        
+#    for i in range(tree.GetEntries()):
+#        tree.GetEntry(i);
+#        cur_pt = math.sqrt(tree.p_px*tree.p_px + tree.p_py*tree.p_py);
+#
+#        if cur_pt > 1 and tree.p_isPU == 0:
+##            print "tree.p_puppiW = ", tree.p_puppiW
+#            weights_LV_all.Fill( tree.p_puppiW );
+#            weights_LV_chLV.Fill( tree.p_puppiW_chLV );
+#
+#        if cur_pt > 1 and tree.p_isPU == 1:
+#            weights_PU_all.Fill( tree.p_puppiW );
+#            weights_PU_chLV.Fill( tree.p_puppiW_chLV );
+#                                                                            
+#    makeCanvas( [weights_LV_all,weights_PU_all], ["LV #beta1","PU #beta1"], "puppi_shape" );
+#    makeCanvas( [weights_LV_chLV,weights_PU_chLV], ["LV #beta2","PU #beta2"], "puppi_chLV" );
 
-    weights_PU_chLV = ROOT.TH1F("weights_PU_chLV","; weight; count", 100, hlo, hhi);
-    weights_LV_chLV = ROOT.TH1F("weights_LV_chLV","; weight; count", 100, hlo, hhi);        
+    # for ch only
+    weights_all_all = ROOT.TH1F("weights_all","; weight; count", nbins, hlo, hhi);
+    weights_PU_all = ROOT.TH1F("weights_PU_all","; weight; count", nbins, hlo, hhi);
+    weights_LV_all = ROOT.TH1F("weights_LV_all","; weight; count", nbins, hlo, hhi);        
+    weights_nePU_all = ROOT.TH1F("weights_nePU_all","; weight; count", nbins, hlo, hhi);
+    weights_neLV_all = ROOT.TH1F("weights_neLV_all","; weight; count", nbins, hlo, hhi);        
 
-    weights_PU_chPU = ROOT.TH1F("weights_PU_chPU","; weight; count", 100, hlo, hhi);
-    weights_LV_chPU = ROOT.TH1F("weights_LV_chPU","; weight; count", 100, hlo, hhi);        
+    weights_all_chLV = ROOT.TH1F("weights_chLV","; weight; count", nbins, hlo, hhi);
+    weights_PU_chLV = ROOT.TH1F("weights_PU_chLV","; weight; count", nbins, hlo, hhi);
+    weights_LV_chLV = ROOT.TH1F("weights_LV_chLV","; weight; count", nbins, hlo, hhi);        
+    weights_nePU_chLV = ROOT.TH1F("weights_nePU_chLV","; weight; count", nbins, hlo, hhi);
+    weights_neLV_chLV = ROOT.TH1F("weights_neLV_chLV","; weight; count", nbins, hlo, hhi);        
 
-    weights_PU_ch = ROOT.TH1F("weights_PU_ch","; weight; count", 100, 2*hlo, 2*hhi);
-    weights_LV_ch = ROOT.TH1F("weights_LV_ch","; weight; count", 100, 2*hlo, 2*hhi);        
+    weights_all_comb = ROOT.TH1F("weights_all_comb","; weight; count", nbins, hlo, hhi);
+    weights_PU_comb = ROOT.TH1F("weights_PU_comb","; weight; count", nbins, hlo, hhi);
+    weights_LV_comb = ROOT.TH1F("weights_LV_comb","; weight; count", nbins, hlo, hhi);        
+    weights_nePU_comb = ROOT.TH1F("weights_nePU_comb","; weight; count", nbins, hlo, hhi);
+    weights_neLV_comb = ROOT.TH1F("weights_neLV_comb","; weight; count", nbins, hlo, hhi);        
 
-    weights_PU_chLV_shape = ROOT.TH1F("weights_PU_chLV_shape","; weight; count", 100, 2*hlo, 2*hhi);
-    weights_LV_chLV_shape = ROOT.TH1F("weights_LV_chLV_shape","; weight; count", 100, 2*hlo, 2*hhi);        
-
-    weights_PU_all = ROOT.TH1F("weights_PU_all","; weight; count", 100, 2*hlo, 2*hhi);
-    weights_LV_all = ROOT.TH1F("weights_LV_all","; weight; count", 100, 2*hlo, 2*hhi);        
+    weights_LV_allVschLV = ROOT.TH2F("weights_LV_allVschLV",";shape;LV",nbins,hlo,hhi,nbins,hlo,hhi);
+    weights_PU_allVschLV = ROOT.TH2F("weights_PU_allVschLV",";shape;LV",nbins,hlo,hhi,nbins,hlo,hhi);
     
     for i in range(tree.GetEntries()):
         tree.GetEntry(i);
         cur_pt = math.sqrt(tree.p_px*tree.p_px + tree.p_py*tree.p_py);
+        
         if cur_pt > 1:
-            if tree.p_isPU == 0: 
-                weights_LV.Fill( tree.p_puppiW );
-                weights_LV_chLV.Fill( tree.p_puppiW_chLV );                
-                weights_LV_chPU.Fill( tree.p_puppiW_chPU ); 
-                weights_LV_ch.Fill( tree.p_puppiW_chLV - tree.p_puppiW_chPU );                                
-                weights_LV_chLV_shape.Fill( tree.p_puppiW_chLV + tree.p_puppiW );                
-                weights_LV_all.Fill( tree.p_puppiW + tree.p_puppiW_chLV - tree.p_puppiW_chPU );                                
-            if tree.p_isPU == 1: 
-                weights_PU.Fill( tree.p_puppiW );
-                weights_PU_chLV.Fill( tree.p_puppiW_chLV );                
-                weights_PU_chPU.Fill( tree.p_puppiW_chPU );                                
-                weights_PU_ch.Fill( tree.p_puppiW_chLV - tree.p_puppiW_chPU );                                
-                weights_PU_chLV_shape.Fill( tree.p_puppiW_chLV + tree.p_puppiW );                
-                weights_PU_all.Fill( tree.p_puppiW + tree.p_puppiW_chLV - tree.p_puppiW_chPU );                                
-                                 
-    makeCanvas( [weights_PU,weights_LV], ["PU shape","LV shape"], "puppi_shape" );
-    makeCanvas( [weights_PU_chLV,weights_LV_chLV], ["PU chLV","LV chLV"], "puppi_chLV" );
-    makeCanvas( [weights_PU_chPU,weights_LV_chPU], ["PU chPU","LV chPU"], "puppi_chPU" );
-    makeCanvas( [weights_PU_ch,weights_LV_ch], ["PU ch","LV ch"], "puppi_ch" );
-    makeCanvas( [weights_PU_chLV_shape,weights_LV_chLV_shape], ["PU chLV+shape","LV chLV+shape"], "puppi_chLV_shape" );
-    makeCanvas( [weights_PU_all,weights_LV_all], ["PU all","LV all"], "puppi_all" );        
+            weights_all_all.Fill( tree.p_puppiW );
+            weights_all_chLV.Fill( tree.p_puppiW_chLV );
+            weights_all_comb.Fill( tree.p_puppiW_comb );            
 
-    roc_shape = makeROCFromHisto(weights_PU,weights_LV, True);
-    roc_chLV = makeROCFromHisto(weights_PU_chLV,weights_LV_chLV, True);
-    roc_chPU = makeROCFromHisto(weights_PU_chPU,weights_LV_chPU, True);
-    roc_ch = makeROCFromHisto(weights_PU_ch,weights_LV_ch, True);
-    roc_chLV_shape = makeROCFromHisto(weights_PU_chLV_shape,weights_LV_chLV_shape, True);
-    roc_all = makeROCFromHisto(weights_PU_all,weights_LV_all, True);
-    
-    rocs = [roc_shape,roc_chLV,roc_chPU,roc_ch,roc_chLV_shape,roc_all];
-    rocNames = ["shape","chLV","chPU","ch","chLV+shape","shape+chLV-chPU"];
+        if cur_pt > 1 and tree.p_isPU == 0 and tree.p_isCH == 0:
+            weights_neLV_all.Fill( tree.p_puppiW );
+            weights_neLV_chLV.Fill( tree.p_puppiW_chLV );
+            weights_neLV_comb.Fill( tree.p_puppiW_comb );                        
+
+        if tree.p_isCH <= 1 and tree.p_isPU == 0 and cur_pt > 1:
+            weights_LV_all.Fill( tree.p_puppiW );
+            weights_LV_chLV.Fill( tree.p_puppiW_chLV );
+            weights_LV_comb.Fill( tree.p_puppiW_comb );   
+            weights_LV_allVschLV.Fill( tree.p_puppiW, tree.p_puppiW_chLV );
+                                                                              
+        if tree.p_isPU == 1 and tree.p_isCH == 0 and cur_pt > 1: 
+            weights_nePU_all.Fill( tree.p_puppiW );
+            weights_nePU_chLV.Fill( tree.p_puppiW_chLV );                    
+            weights_nePU_comb.Fill( tree.p_puppiW_comb );                    
+       
+        if tree.p_isCH <= 1 and tree.p_isPU == 1 and cur_pt > 1:
+            weights_PU_all.Fill( tree.p_puppiW );
+            weights_PU_chLV.Fill( tree.p_puppiW_chLV );
+            weights_PU_comb.Fill( tree.p_puppiW_comb );
+            weights_PU_allVschLV.Fill( tree.p_puppiW, tree.p_puppiW_chLV );    
+
+    cutOn = findEqualTailProbabilities(weights_LV_chLV,weights_PU_chLV);
+    print "cutOn = ", cutOn;
+
+    makeCanvas( [weights_LV_all,weights_PU_all],   ["LV #Sigma all", "PU #Sigma all"], "puppi_allOnAll", True );        
+    makeCanvas( [weights_LV_chLV,weights_PU_chLV], ["LV #Sigma chLV","PU #Sigma chLV"], "puppi_allOnchLV", True );        
+    makeCanvas( [weights_LV_comb,weights_PU_comb], ["LV #Sigma comb","PU #Sigma comb"], "puppi_allOnchPU", True );        
+
+    makeSingleHistCanvas(weights_LV_allVschLV);
+    makeSingleHistCanvas(weights_PU_allVschLV);
+
+    roc_shape = makeROCFromHisto(weights_LV_all,weights_PU_all, True);
+    roc_chLV = makeROCFromHisto(weights_LV_chLV,weights_PU_chLV, True);
+    roc_chPU = makeROCFromHisto(weights_LV_comb,weights_PU_comb, True);
+#    roc_ch = makeROCFromHisto(weights_PU_ch,weights_LV_ch, True);
+#    roc_chLV_shape = makeROCFromHisto(weights_PU_chLV_shape,weights_LV_chLV_shape, True);
+#    roc_chLV_shape_prod = makeROCFromHisto(weights_PU_chLV_shape_prod,weights_LV_chLV_shape_prod, False);
+#    roc_all = makeROCFromHisto(weights_PU_all,weights_LV_all, True);
+#    
+    rocs = [roc_shape,roc_chLV,roc_chPU];
+    rocNames = ["shape","chLV","combined"];
+    #rocs = [roc_chLV]
+    #rocNames = ["puppi tracks"];
+
     
     drawROCs(rocs,rocNames,"rocs");
-                                                                      
-#    can1 = ROOT.TCanvas("can1","can1",1000,800);
-#    weights_PU.SetMinimum(1);
-#    weights_PU.Draw();
-#    weights_LV.Draw("sames");   
-#    #ROOT.gPad.SetLogy();
-#    can1.SaveAs("test_shape.png");     
-#    
-#    can2 = ROOT.TCanvas("can2","can2",1000,800);
-#    weights_PU_chLV.SetMinimum(1);
-#    weights_PU_chLV.Draw();
-#    weights_LV_chLV.Draw("sames");   
-#    #ROOT.gPad.SetLogy();
-#    can2.SaveAs("test_chLV.png");     
-#
-#    can3 = ROOT.TCanvas("can3","can3",1000,800);
-#    weights_PU_chPU.SetMinimum(1);
-#    weights_PU_chPU.Draw();
-#    weights_LV_chPU.Draw("sames");   
-#    #ROOT.gPad.SetLogy();
-#    can3.SaveAs("test_chPU.png");     
-#
-#    can4 = ROOT.TCanvas("can4","can4",1000,800);
-#    weights_PU_ch.SetMinimum(1);
-#    weights_PU_ch.Draw();
-#    weights_LV_ch.Draw("sames");   
-#    #ROOT.gPad.SetLogy();
-#    can4.SaveAs("test_ch.png");     
-#
-#    can5 = ROOT.TCanvas("can5","can5",1000,800);
-#    weights_PU_all.SetMinimum(1);
-#    weights_PU_all.Draw();
-#    weights_LV_all.Draw("sames");   
-#    #ROOT.gPad.SetLogy();
-#    can5.SaveAs("test_all.png");     

@@ -49,7 +49,7 @@ std::vector<float> v_jet_m_;
 std::vector<float> v_jet_pt_;
 std::vector<float> v_jet_eta_;
 
-float p_isPU, p_px, p_py, p_pz, p_e, p_puppiW, p_cleansedW, p_puppiW_chLV, p_puppiW_chPU;
+float p_isPU, p_isCH, p_px, p_py, p_pz, p_e, p_puppiW, p_cleansedW, p_puppiW_chLV, p_puppiW_comb;
 
 /////////////////////////////////////////////////////////////////////
 // Helper functions
@@ -75,6 +75,8 @@ void addBranches( TTree &tree ){
 
 void initParticleVars(){
     p_isPU = -1.;
+    p_isCH = -1.;
+    
     p_px = -1.;
     p_py = -1.;
     p_pz = -1.;
@@ -82,20 +84,21 @@ void initParticleVars(){
 
     p_puppiW = -1.;
     p_puppiW_chLV = -1.;
-    p_puppiW_chPU = -1.;
+    p_puppiW_comb = -1.;
 
     p_cleansedW = -1.;            
 }
 
 void addParticleBranches( TTree &tree ){
     tree.Branch("p_isPU",&p_isPU);
+    tree.Branch("p_isCH",&p_isCH);
     tree.Branch("p_px",&p_px);
     tree.Branch("p_py",&p_py);
     tree.Branch("p_pz",&p_pz);
     tree.Branch("p_e",&p_e);
     tree.Branch("p_puppiW",&p_puppiW);
     tree.Branch("p_puppiW_chLV",&p_puppiW_chLV);
-    tree.Branch("p_puppiW_chPU",&p_puppiW_chPU);
+    tree.Branch("p_puppiW_comb",&p_puppiW_comb);
     tree.Branch("p_cleansedW",&p_cleansedW);    
 }
 
@@ -148,76 +151,79 @@ int main( int argc, char **argv ) {
     while(true){
 
         readEvent( allParticles, v_isPU, v_isCh );
-        
-        puppiContainer curEvent(allParticles, v_isPU, v_isCh);
-        //std::vector<fastjet::PseudoJet> genParticles = curEvent.genParticles();
-        //std::vector<fastjet::PseudoJet> pfParticles = curEvent.pfParticles();
-        //std::vector<fastjet::PseudoJet> pfchsParticles = curEvent.pfchsParticles();
-        //std::vector<fastjet::PseudoJet> trimmedParticles = curEvent.trimEvent();
-        //std::vector<fastjet::PseudoJet> cleansedParticles = curEvent.cleanseEvent(0.3);
-        //std::vector<fastjet::PseudoJet> puppiParticles = curEvent.puppiEvent(0.5,2.);
-        std::vector<fastjet::PseudoJet> puppiParticles = curEvent.puppiEvent(80);
 
-        if (nEvts > 0){
+        if (nEvts > 1){
+                
+            puppiContainer curEvent(allParticles, v_isPU, v_isCh);
+            std::vector<fastjet::PseudoJet> genParticles = curEvent.genParticles();
+            std::vector<fastjet::PseudoJet> pfParticles = curEvent.pfParticles();
+            //std::vector<fastjet::PseudoJet> pfchsParticles = curEvent.pfchsParticles();
+            //std::vector<fastjet::PseudoJet> trimmedParticles = curEvent.trimEvent();
+            //std::vector<fastjet::PseudoJet> cleansedParticles = curEvent.cleanseEvent(0.3);
+            //std::vector<fastjet::PseudoJet> puppiParticles = curEvent.puppiEvent(0.5,2.);
+
+            std::vector<fastjet::PseudoJet> puppiParticles = curEvent.puppiEvent(80);
             
             char canvname[150];
                         
-            if (nEvts < 1000 and nEvts > 0){
+            if (nEvts < 25 and nEvts > 0){
             
                 std::vector<float> puppiWeights = curEvent.getPuppiWeights();
                 std::vector<float> puppiWeights_chLV = curEvent.getPuppiWeights_chLV();                
-                std::vector<float> puppiWeights_chPU = curEvent.getPuppiWeights_chPU();                
+                std::vector<float> puppiWeights_comb = curEvent.getPuppiWeights_combined();                
                 /////std::vector<float> cleansedWeights = curEvent.getCleansedWeights();    
                 // fill weights
                 for (unsigned int a = 0; a < allParticles.size(); a++){
                     p_isPU = v_isPU[a];
+                    p_isCH = v_isCh[a];                    
                     p_px = allParticles[a].px();
                     p_py = allParticles[a].py();
                     p_pz = allParticles[a].pz();
                     p_e = allParticles[a].e();
                     p_puppiW = puppiWeights[a];
                     p_puppiW_chLV = puppiWeights_chLV[a];
-                    p_puppiW_chPU = puppiWeights_chPU[a];                                        
+                    p_puppiW_comb = puppiWeights_comb[a];                                        
                     /////p_cleansedW = cleansedWeights[a];            
                     tree_particles->Fill();
                 }
             
-//                sprintf( canvname, "displays/dis_gen_%i_%i", nEvts, PUscenario );
-//                plotEvent( genParticles, canvname );
-//                sprintf( canvname, "displays/dis_pf_%i_%i", nEvts, PUscenario );
-//                plotEvent( pfParticles, canvname );
+                sprintf( canvname, "displays/dis_gen_%i_%i", nEvts, PUscenario );
+                plotEvent( genParticles, canvname );
+                sprintf( canvname, "displays/dis_pf_%i_%i", nEvts, PUscenario );
+                plotEvent( pfParticles, canvname );
 //                sprintf( canvname, "displays/dis_pfchs_%i_%i", nEvts, PUscenario );
 //                plotEvent( pfchsParticles, canvname );                
 //                sprintf( canvname, "displays/dis_pf_tr_%i_%i", nEvts, PUscenario );
 //                plotEvent( trimmedParticles, canvname );
 //                sprintf( canvname, "displays/dis_pf_cl_%i_%i", nEvts, PUscenario );
 //                plotEvent( cleansedParticles, canvname );
-//                sprintf( canvname, "displays/dis_pf_puppi_%i_%i", nEvts, PUscenario );
-//                plotEvent( puppiParticles, canvname );
+                sprintf( canvname, "displays/dis_pf_puppi_%i_%i", nEvts, PUscenario );
+                plotEvent( puppiParticles, canvname );
 
             }
             
 //            sprintf( canvname, "dummy" );
-//            initVars();
-//            analyzeEvent( curEvent.genParticles(), *tree_gen, canvname, 0.7 );
-//            initVars();
-//            analyzeEvent( curEvent.pfParticles(), *tree_pf, canvname, 0.7 );
+            initVars();
+            analyzeEvent( curEvent.genParticles(), *tree_gen, canvname, 0.7 );
+            initVars();
+            analyzeEvent( curEvent.pfParticles(), *tree_pf, canvname, 0.7 );
 //            initVars();
 //            analyzeEvent( curEvent.pfchsParticles(), *tree_pfchs, canvname, 0.7 );
 //            initVars();
 //            analyzeEvent( trimmedParticles, *tree_pf_tr, canvname, 0.7 );
 //            initVars();
 //            analyzeEvent( cleansedParticles, *tree_pf_cl, canvname, 0.7 );
-//            initVars();
-//            analyzeEvent( puppiParticles, *tree_pf_puppi, canvname, 0.7 );
+            initVars();
+            analyzeEvent( puppiParticles, *tree_pf_puppi, canvname, 0.7 );
 //
+            
             allParticles.clear();
             v_isPU.clear();
             v_isCh.clear();
         }
             
         nEvts++;
-        if (nEvts % 10 == 0) std::cout << "event no. = " << nEvts << std::endl;
+        if (nEvts % 1 == 0) std::cout << "event no. = " << nEvts << std::endl;
         if (nEvts == maxEvents){ break; }
 
         if(fin.eof()) break;

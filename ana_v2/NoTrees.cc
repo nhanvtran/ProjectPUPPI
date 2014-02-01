@@ -241,6 +241,13 @@ double puppi_within_R(const vector<PseudoJet> & particles, const PseudoJet& cent
     fastjet::Selector sel = fastjet::SelectorCircle(R);
     sel.set_reference(centre);
     vector<PseudoJet> near_particles = sel(particles);
+    
+//    // pT_{i,R_puppi}
+//    double ptIR = 0.0;
+//    for(unsigned int i=0; i<near_particles.size(); i++){
+//        ptIR += near_particles[i].pt();
+//    }
+    
     double puppi = 0;
     for(unsigned int i=0; i<near_particles.size(); i++){
         double pDEta = near_particles[i].eta()-centre.eta();
@@ -263,18 +270,25 @@ double puppi_within_R(const vector<PseudoJet> & particles, const PseudoJet& cent
         if(lE > lP) lM = sqrt(lE*lE-lP*lP);
         if(lM < 0.01) lM = 0.01;
         
+        //double puppi_wExp1 = 2.*log(max(near_particles[i].pt(),centre.pt())/pDR);
+        //double puppi_wExp2 = 2.*log(max(near_particles[i].pt(),centre.pt())*max(near_particles[i].pt(),centre.pt())/pDR/pDR);        
+        //std::cout << "puppi_wExp1 = " << puppi_wExp1 << ", puppi_wExp2 = " << puppi_wExp2 << std::endl;
+        
         //=>if(!iMass) puppi += min(near_particles[i].pt(),centre.pt())*pDR;//log(pDR/lE);
         //if(!iMass) puppi += log(max(near_particles[i].pt(),centre.pt())/pDR);//log(pDR/lE);
-        if(!iMass) puppi += 2.*log(max(near_particles[i].pt(),centre.pt())/pDR);//log(pDR/lE);
-                                                                                //if(!iMass) puppi += log(max(near_particles[i].E(),centre.E())/pDR/pDR);//log(pDR/lE);
-                                                                                //if(!iMass) puppi += log(sqrt(lSum.m())*1./pDR/min(near_particles[i].pt(),centre.pt()));//log(pDR/lE);
-                                                                                //if(!iMass) puppi += log((lSum.pt()/lM)/pDR);//lSum.m()*1./pDR/min(near_particles[i].pt(),centre.pt()));//log(pDR/lE);
-                                                                                //if(!iMass) puppi += lE*lE/pDR/pDR/pDR;//pDR/lE;
-                                                                                //if(!iMass ) puppi += log((near_particles[i]+centre).m()*(near_particles[i]+centre).m()/pDR/pDR);//*(near_particles[i]+centre).pt()*(near_particles[i]+centre).pt();
-        if(iMass ) puppi += min(near_particles[i].pt(),centre.pt())*min(near_particles[i].pt(),centre.pt())/pDR/pDR;//*(near_particles[i]+centre).pt()*(near_particles[i]+centre).pt();
+       
+        //puppi += log(near_particles[i].pt()/pDR);
+        puppi += log(near_particles[i].pt()*centre.pt()/pDR/pDR);
+        
+        if(iMass) puppi += max(near_particles[i].pt(),centre.pt())*max(near_particles[i].pt(),centre.pt())/pDR/pDR;//*(near_particles[i]+centre).pt()*(near_particles[i]+centre).pt();
         
     }
-    return puppi;//near_particles.size();
+    
+//    double weight = centre.pt()/ptIR;
+//    std::cout << "weight = " << weight << ", near_particles.size() = " << near_particles.size() << std::endl;
+//    puppi *= centre.pt()/ptIR;
+    
+    return puppi;
 }
 
 //} // namespace contrib

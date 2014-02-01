@@ -223,6 +223,58 @@ double pt_within_R(const vector<PseudoJet> & particles, const PseudoJet& centre,
    return(answer);
 }
 
+PseudoJet flow_within_R(const vector<PseudoJet> & particles, const PseudoJet& centre, double R){
+
+   fastjet::Selector sel = fastjet::SelectorCircle(R);
+   sel.set_reference(centre);
+   vector<PseudoJet> near_particles = sel(particles);
+   PseudoJet flow;
+   for(unsigned int i=0; i<near_particles.size(); i++){
+     //if(flow.pt() < near_particles[i].pt()) flow = near_particles[i];
+     flow += near_particles[i];
+   }
+   return flow;
+}
+
+double puppi_within_R(const vector<PseudoJet> & particles, const PseudoJet& centre, double R,bool iMass){
+  fastjet::Selector sel = fastjet::SelectorCircle(R);
+   sel.set_reference(centre);
+   vector<PseudoJet> near_particles = sel(particles);
+   double puppi = 0;
+   for(unsigned int i=0; i<near_particles.size(); i++){
+     double pDEta = near_particles[i].eta()-centre.eta();
+     double pDPhi = fabs(near_particles[i].phi()-centre.phi());
+     if(pDPhi > 2.*3.14159265-pDPhi) pDPhi =  2.*3.14159265-pDPhi;
+     double pDR = sqrt(pDEta*pDEta+pDPhi*pDPhi);
+     if(pDR  < 0.001) continue;
+     if(pDR  <  0.05) pDR = 0.05;
+     if(pDR == 0) continue;
+     double lE =  near_particles[i].E() + centre.E();
+     //if(lE < 0.1) continue;
+     double lM =  (near_particles[i] + centre).m();
+     double lP =  sqrt((near_particles[i] + centre).pt2()+((near_particles[i] + centre).pz()*(near_particles[i] + centre).pz()));
+     double lDot = near_particles[i].E()*centre.E() - near_particles[i].px()*centre.px()-near_particles[i].py()*centre.py()-near_particles[i].pz()*centre.pz();
+     PseudoJet lSum = centre + near_particles[i];
+     double lFSum = near_particles[i].E()*lSum.E() - near_particles[i].px()*lSum.px()-near_particles[i].py()*lSum.py()-near_particles[i].pz()*lSum.pz();
+     // cout << "---> " << lDot << " -- " << lFSum << endl;
+     lDot = max(lFSum,lDot);
+     if(lE < lP) lM = 0.01; //cout << "===> Problem " <<  pDR << " -- " << lE << " -- " << lP << endl;
+     if(lE > lP) lM = sqrt(lE*lE-lP*lP);
+     if(lM < 0.01) lM = 0.01;
+
+     //=>if(!iMass) puppi += min(near_particles[i].pt(),centre.pt())*pDR;//log(pDR/lE);
+     //if(!iMass) puppi += log(max(near_particles[i].pt(),centre.pt())/pDR);//log(pDR/lE);
+     if(!iMass) puppi += 2.*log(max(near_particles[i].pt(),centre.pt())/pDR);//log(pDR/lE);
+     //if(!iMass) puppi += log(max(near_particles[i].E(),centre.E())/pDR/pDR);//log(pDR/lE);
+     //if(!iMass) puppi += log(sqrt(lSum.m())*1./pDR/min(near_particles[i].pt(),centre.pt()));//log(pDR/lE);
+     //if(!iMass) puppi += log((lSum.pt()/lM)/pDR);//lSum.m()*1./pDR/min(near_particles[i].pt(),centre.pt()));//log(pDR/lE);
+     //if(!iMass) puppi += lE*lE/pDR/pDR/pDR;//pDR/lE;
+     //if(!iMass ) puppi += log((near_particles[i]+centre).m()*(near_particles[i]+centre).m()/pDR/pDR);//*(near_particles[i]+centre).pt()*(near_particles[i]+centre).pt();
+     if(iMass ) puppi += min(near_particles[i].pt(),centre.pt())*min(near_particles[i].pt(),centre.pt())/pDR/pDR;//*(near_particles[i]+centre).pt()*(near_particles[i]+centre).pt();
+     
+   }
+   return puppi;//near_particles.size();
+}
 
 //} // namespace contrib
 //

@@ -20,7 +20,7 @@ public:
 
     std::vector<float> getPuppiWeights(){ return puppiWeights; };  
     std::vector<float> getPuppiWeights_chLV(){ return puppiWeights_chLV; };  
-    std::vector<float> getPuppiWeights_chPU(){ return puppiWeights_chPU; };  
+    std::vector<float> getPuppiWeights_combined(){ return puppiWeights_combined; };  
 
     std::vector<float> getCleansedWeights(){ return cleansedWeights; };      
     
@@ -33,6 +33,9 @@ public:
     
 protected:
         
+    double getAverage(const vector<double> & particles);
+    double getRMS(const vector<double> & particles);
+            
     double pt_within_R(const vector<PseudoJet> & particles, const PseudoJet& centre, double R);
     double ktWeight_within_R(const vector<PseudoJet> & particles, const PseudoJet& centre, double R, double exponent);    
     
@@ -46,10 +49,11 @@ protected:
     
     std::vector<int> _isPU;
     std::vector<int> _isCh;    
+    std::vector<int> _isPFCHS; 
     
     std::vector<float> puppiWeights;
     std::vector<float> puppiWeights_chLV;
-    std::vector<float> puppiWeights_chPU;
+    std::vector<float> puppiWeights_combined;
             
     std::vector<float> cleansedWeights;
     
