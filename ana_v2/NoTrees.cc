@@ -236,6 +236,33 @@ PseudoJet flow_within_R(const vector<PseudoJet> & particles, const PseudoJet& ce
    return flow;
 }
 
+double var_within_R(int iId, const vector<PseudoJet> & particles, const PseudoJet& centre, double R){
+  fastjet::Selector sel = fastjet::SelectorCircle(R);
+  sel.set_reference(centre);
+  vector<PseudoJet> near_particles = sel(particles);
+  double var = 0;
+  double lSumPt = 0;
+  if(iId == 5 || iId == 6) for(unsigned int i=0; i<near_particles.size(); i++) lSumPt += near_particles[i].pt();
+  for(unsigned int i=0; i<near_particles.size(); i++){
+    double pDEta = near_particles[i].eta()-centre.eta();
+    double pDPhi = fabs(near_particles[i].phi()-centre.phi());
+    if(pDPhi > 2.*3.14159265-pDPhi) pDPhi =  2.*3.14159265-pDPhi;
+    double pDR = sqrt(pDEta*pDEta+pDPhi*pDPhi);
+    if(pDR  < 0.001) continue;
+    if(pDR  <  0.05) pDR = 0.05;
+    if(pDR == 0) continue;
+    if(iId == 0) var += pDR;
+    if(iId == 1) var += near_particles[i].pt();
+    if(iId == 2) var += log(pDR*near_particles[i].pt());
+    if(iId == 3) var += log(near_particles[i].pt()/sqrt(pDR));
+    if(iId == 4) var += log(near_particles[i].pt()/pDR);
+    if(iId == 5) var += log(near_particles[i].pt()/pDR/lSumPt);
+    if(iId == 6) var += log(near_particles[i].pt()/pDR);
+    if(iId == 7) var += log(near_particles[i].pt()/pDR);
+  }
+  return var;
+}
+
 double puppi_within_R(const vector<PseudoJet> & particles, const PseudoJet& centre, double R, bool iMass){
 
     fastjet::Selector sel = fastjet::SelectorCircle(R);

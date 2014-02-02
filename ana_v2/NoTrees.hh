@@ -151,6 +151,7 @@ private:
 //----------------------------------------------------------------------
 //Function pt_within_R sums pT of a subset of particles. The subset is defined by a circle of radius R around centre.
 
+double var_within_R(int iId, const vector<PseudoJet> & particles, const PseudoJet& centre, double R);
 double pt_within_R(const std::vector<PseudoJet> & particles, const PseudoJet& centre, double R);
 double puppi_within_R(const vector<PseudoJet> & particles, const PseudoJet& centre, double R,bool iMass);
 
