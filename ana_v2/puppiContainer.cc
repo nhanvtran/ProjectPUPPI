@@ -72,6 +72,25 @@ puppiContainer::puppiContainer(std::vector<fastjet::PseudoJet> inParticles, std:
 
 puppiContainer::~puppiContainer(){}
 
+
+std::vector<fastjet::PseudoJet> puppiContainer::pfParticles(){ 
+    std::vector<PseudoJet> answer;
+    answer.resize(0);
+    for (unsigned int i = 0; i < _pfParticles.size(); i++){
+        PseudoJet curjet(_pfParticles[i].px(), 
+                         _pfParticles[i].py(), 
+                         _pfParticles[i].pz(), 
+                         _pfParticles[i].e());
+        curjet.set_user_index(_isPU[i]);
+        answer.push_back( curjet ); 
+    }
+    return answer; 
+}    
+std::vector<fastjet::PseudoJet> puppiContainer::pfchsParticles(){ 
+    return _pfchsParticles; 
+}  
+
+
 std::vector<fastjet::PseudoJet> puppiContainer::trimEvent(double vRjet, double vptcut, double vRsub, double vfcut ){
     
     //std::cout << "trimming event..." << std::endl;
@@ -191,12 +210,12 @@ std::vector<fastjet::PseudoJet> puppiContainer::puppiEvent(int iPU){
         double puppi_Rsub = puppi_within_R(_pfchsParticles,_pfParticles[i],Rsub,false);      
         double puppi_RsubPV = puppi_within_R(_chargedLV,_pfParticles[i],Rsub,false);   
         
-        // downweighting for soft particles near hard particles
-        double pt_Rsub = pt_within_R(_pfParticles,_pfParticles[i],Rsub);
-        double weightI = _pfParticles[i].pt()/pt_Rsub;
-        
-        puppi_Rsub*=weightI;
-        puppi_RsubPV*=weightI;        
+//        // downweighting for soft particles near hard particles
+//        double pt_Rsub = pt_within_R(_pfParticles,_pfParticles[i],Rsub);
+//        double weightI = _pfParticles[i].pt()/pt_Rsub;
+//        
+//        puppi_Rsub*=weightI;
+//        puppi_RsubPV*=weightI;        
         
         lVals.push_back(puppi_Rsub);
         lValsPV.push_back(puppi_RsubPV);
@@ -235,6 +254,7 @@ std::vector<fastjet::PseudoJet> puppiContainer::puppiEvent(int iPU){
 //    std::cout << "min_lValsPV = " << min_lValsPV << std::endl;
     
     //Particles
+    int curjetCtr = 0;
     for(int i0 = 0; i0 < lVals.size(); i0++) { 
         
         double pWeight = lVals[i0];
@@ -253,13 +273,15 @@ std::vector<fastjet::PseudoJet> puppiContainer::puppiEvent(int iPU){
         puppiWeights_chLV.push_back(pWeight2);    
         puppiWeights_combined.push_back(pWeight);    
         
-        if (pWeight2 > 0.95){
+        if (pWeight2 > 0.80){
             //pWeight2 = 1.;
             PseudoJet curjet(pWeight2*_pfParticles[i0].px(), 
                              pWeight2*_pfParticles[i0].py(), 
                              pWeight2*_pfParticles[i0].pz(), 
                              pWeight2*_pfParticles[i0].e());
+            curjet.set_user_index(_isPU[i0]);
             answer.push_back( curjet );
+            curjetCtr++;
         }
     }
     

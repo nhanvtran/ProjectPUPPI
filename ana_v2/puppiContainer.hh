@@ -15,8 +15,8 @@ public:
     ~puppiContainer(); 
     
     std::vector<fastjet::PseudoJet> genParticles(){ return _genParticles; }
-    std::vector<fastjet::PseudoJet> pfParticles(){ return _pfParticles; }    
-    std::vector<fastjet::PseudoJet> pfchsParticles(){ return _pfchsParticles; }  
+    std::vector<fastjet::PseudoJet> pfParticles();
+    std::vector<fastjet::PseudoJet> pfchsParticles();
 
     std::vector<float> getPuppiWeights(){ return puppiWeights; };  
     std::vector<float> getPuppiWeights_chLV(){ return puppiWeights_chLV; };  
