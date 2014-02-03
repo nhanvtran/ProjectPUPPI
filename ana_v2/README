@@ -1,0 +1,28 @@
+Pre-requesites:
+1. Installation of ROOT
+2. Installation of fastjet
+
+Workflow:
+0. Store your data in a directory "samples/"
+1. Run PUPPI
+2. Plot the information
+
+-------------------------
+
+To compile the code for step 1:
+$ make clean
+$ make
+
+To run the code for step 1: 
+$ ./puppiAnalyzer nEvents PUScenario
+
+Inputs: 
+nEvents = number of events to run over
+PUScenario = 20 or 80 or 140, depending on the file
+
+-------------------------
+
+Then, you get a ROOT file, there are trees for the jet collection for each type of jets (gen, pf, puppi, etc.) 
+and a tree for the particle level information in the first 25 events.
+
+Some plotting scripts are available, but no synchronized at the moment...to be continued...
