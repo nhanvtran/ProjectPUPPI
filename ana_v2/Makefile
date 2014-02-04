@@ -1,7 +1,7 @@
 # ----------------------------------------
 # inputs 
 
-FASTJETLOCATION=/Users/ntran/Research/CMS/PhysicsAnalysis/boost2013/fastjet/fastjet-install/
+FASTJETLOCATION=/Users/ntran/Research/CMS/PhysicsAnalysis/ProjectPUPPI/V2/fastjet-install/
 FASTJETINC :=`$(FASTJETLOCATION)/bin/fastjet-config --cxxflags --plugins`
 FASTJETLIB :=`$(FASTJETLOCATION)/bin/fastjet-config --libs --plugins`
 

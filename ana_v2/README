@@ -9,7 +9,35 @@ Workflow:
 
 -------------------------
 
+For the pre-requisites (assumes you have loaded ROOT in your path already):
+### install Fastjet
+$ wget http://fastjet.fr/repo/fastjet-3.0.6.tar.gz
+$ tar -xvzf fastjet-3.0.6.tar.gz
+$ cd fastjet-3.0.6
+$ ./configure --prefix=$PWD/../fastjet-install
+$ make
+$ make check
+$ make install
+### add to path 
+$ cd ../fastjet-install/bin
+$ export PATH=$PATH:$PWD 
+### install fjcontrib
+$ cd ../..
+$ svn checkout http://fastjet.hepforge.org/svn/contrib/trunk fjcontrib
+$ cd fjcontrib
+$ scripts/update-contribs.sh
+### (you might have to modfify RecursiveTools/example_mmdt_sub.cc, I found a small compilation error)
+$ scripts/update-contribs.sh RecursiveTools 1.0-beta0 
+### Only if you want to get the head of the SoftDropGroomer
+$ svn checkout http://fastjet.hepforge.org/svn/contrib/contribs/SoftDrop/trunk SoftDrop
+$ ./configure
+$ make
+$ make check
+$ make install
+
 To compile the code for step 1:
+$ cd $mypuppi/ana_v2
+### modify the Makefile to put in your path the fastjet-install
 $ make clean
 $ make
 
