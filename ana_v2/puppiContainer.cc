@@ -11,11 +11,12 @@ using namespace fastjet;
 
 puppiContainer::puppiContainer(std::vector<fastjet::PseudoJet> inParticles, std::vector<int> isPU, std::vector<int> isCh){
     
-    _pfParticles = inParticles;
+    //_pfParticles = inParticles;
     _isPU = isPU;
     _isCh = isCh;
     _isPFCHS.resize(0);
     
+    _pfParticles.resize(0);
     _genParticles.resize(0);
     _pfchsParticles.resize(0);    
     _neutrals.resize(0);
@@ -24,43 +25,51 @@ puppiContainer::puppiContainer(std::vector<fastjet::PseudoJet> inParticles, std:
     
         
     double etaTracker = 5.;
-    
-    for (unsigned int i = 0; i < _pfParticles.size(); i++){
+    double userIndex_isPuCh = -1;
+    for (unsigned int i = 0; i < inParticles.size(); i++){
         float weightGEN = 0.;
         float weightPFCHS = 0.;
         
         // fill vector of pseudojets
-        if (fabs(_pfParticles[i].eta()) < 5 && _pfParticles[i].pt() > 0.2){        
+        if (fabs(inParticles[i].eta()) < 5 && inParticles[i].pt() > 0.2){        
             
-            PseudoJet curjet(_pfParticles[i].px(), _pfParticles[i].py(), _pfParticles[i].pz(), _pfParticles[i].e());
+            PseudoJet curjet(inParticles[i].px(), inParticles[i].py(), inParticles[i].pz(), inParticles[i].e());
+            curjet.set_user_index( -1 );
             
             if (isPU[i] == 0){
                 weightGEN = 1.;
             }
             
-            if ((isPU[i] == 0) || (isPU[i] == 1 && isCh[i] == 0 && fabs(_pfParticles[i].eta()) < etaTracker) || (isPU[i] == 1 && fabs(_pfParticles[i].eta()) > etaTracker)){
+            if ((isPU[i] == 0) || (isPU[i] == 1 && isCh[i] == 0 && fabs(inParticles[i].eta()) < etaTracker) || (isPU[i] == 1 && fabs(inParticles[i].eta()) > etaTracker)){
                 weightPFCHS = 1.;
             }
             if (weightGEN > 0){
-                PseudoJet curjetGEN( weightGEN*_pfParticles[i].px(), weightGEN*_pfParticles[i].py(), weightGEN*_pfParticles[i].pz(), weightGEN*_pfParticles[i].e());
+                PseudoJet curjetGEN( weightGEN*inParticles[i].px(), weightGEN*inParticles[i].py(), weightGEN*inParticles[i].pz(), weightGEN*inParticles[i].e());
                 _genParticles.push_back( curjetGEN );
             }
             if (weightPFCHS > 0){
-                PseudoJet curjetPFCHS( weightPFCHS*_pfParticles[i].px(), weightPFCHS*_pfParticles[i].py(), weightPFCHS*_pfParticles[i].pz(), weightPFCHS*_pfParticles[i].e());            
+                PseudoJet curjetPFCHS( weightPFCHS*inParticles[i].px(), weightPFCHS*inParticles[i].py(), weightPFCHS*inParticles[i].pz(), weightPFCHS*inParticles[i].e());            
                 _pfchsParticles.push_back( curjetPFCHS );
                 
                 if (isCh[i] == 0){
                     _neutrals.push_back( curjet );
+                    userIndex_isPuCh = 1;
                 }
                 else{
                     _chargedLV.push_back( curjet );
+                    userIndex_isPuCh = 2;                    
                 }
             }
             if (weightPFCHS == 0){
                 _chargedPU.push_back( curjet );
+                userIndex_isPuCh = 3;                
             }
             
             _isPFCHS.push_back( weightPFCHS );
+            
+            // need this for cleansing
+            curjet.set_user_index( userIndex_isPuCh );
+            _pfParticles.push_back( curjet );
         }
     }
     

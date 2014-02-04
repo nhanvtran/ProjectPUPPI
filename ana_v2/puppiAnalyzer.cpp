@@ -28,12 +28,15 @@
 #include "fastjet/GhostedAreaSpec.hh"
 #include "fastjet/PseudoJet.hh"
 #include "fastjet/JetDefinition.hh"
+#include <fastjet/tools/GridMedianBackgroundEstimator.hh>
+#include <fastjet/contrib/JetCleanser.hh>
 
 #include "puppiContainer.hh"
 #include "NoTrees.hh"
 
 using namespace std;
 using namespace fastjet;
+using namespace fastjet::contrib;
 
 // Global variables
 
@@ -48,6 +51,23 @@ int njets_;
 std::vector<float> v_jet_m_;
 std::vector<float> v_jet_pt_;
 std::vector<float> v_jet_eta_;
+std::vector<float> v_jet_phi_;
+
+// trimmed info
+std::vector<float> v_jet_m_trimmed_;
+
+// cleansed info
+std::vector<float> v_jet_m_cleansed_;
+std::vector<float> v_jet_pt_cleansed_;
+std::vector<float> v_jet_eta_cleansed_;
+std::vector<float> v_jet_phi_cleansed_;
+
+// 4-vector subtracted
+std::vector<float> v_jet_m_4Vcorr_;
+std::vector<float> v_jet_pt_4Vcorr_;
+std::vector<float> v_jet_eta_4Vcorr_;
+std::vector<float> v_jet_phi_4Vcorr_;
+
 
 float p_isPU, p_isCH, p_px, p_py, p_pz, p_e, p_puppiW, p_cleansedW, p_puppiW_chLV, p_puppiW_comb;
 
@@ -65,7 +85,15 @@ void initVars(){
     njets_ = -1.;
     v_jet_m_.clear();
     v_jet_pt_.clear();    
-    v_jet_eta_.clear();        
+    v_jet_eta_.clear(); 
+    v_jet_phi_.clear();
+    
+    v_jet_m_trimmed_.clear();
+    
+    v_jet_m_4Vcorr_.clear();
+    v_jet_pt_4Vcorr_.clear();
+    v_jet_eta_4Vcorr_.clear();
+    v_jet_phi_4Vcorr_.clear();    
 }
 
 void addBranches( TTree &tree ){
@@ -73,6 +101,14 @@ void addBranches( TTree &tree ){
     tree.Branch("v_jet_m",&v_jet_m_);
     tree.Branch("v_jet_pt",&v_jet_pt_);
     tree.Branch("v_jet_eta",&v_jet_eta_);    
+    tree.Branch("v_jet_phi",&v_jet_phi_);    
+
+    tree.Branch("v_jet_m_trimmed_",&v_jet_m_trimmed_);    
+
+    tree.Branch("v_jet_m_4Vcorr_",&v_jet_m_4Vcorr_);    
+    tree.Branch("v_jet_pt_4Vcorr_",&v_jet_pt_4Vcorr_);    
+    tree.Branch("v_jet_eta_4Vcorr_",&v_jet_eta_4Vcorr_);    
+    tree.Branch("v_jet_phi_4Vcorr_",&v_jet_phi_4Vcorr_);   
 }
 
 void initParticleVars(){
@@ -352,15 +388,77 @@ std::vector< fastjet::PseudoJet > analyzeEvent( std::vector < fastjet::PseudoJet
     fastjet::ClusterSequenceArea* thisClustering_ = new fastjet::ClusterSequenceArea(constits, jetDef, fjAreaDefinition);
     std::vector<fastjet::PseudoJet> out_jets_ = sorted_by_pt(thisClustering_->inclusive_jets(25.0));
     
+    // trim jet
+	fastjet::Filter trimmer( fastjet::Filter(fastjet::JetDefinition(fastjet::kt_algorithm, 0.3), fastjet::SelectorPtFractionMin(0.05)));
+
+    // 4-vector subtraction
+    fastjet::GridMedianBackgroundEstimator lGrid(5.0,0.8);
+    lGrid.set_particles(constits);
+        
     // ++++++++++++++++++++++++++++++++++++++++++++++++++++
     // FILL IN THE TREE
     //std::cout << "out_jets_.size() = " << out_jets_.size() << std::endl; 
     njets_ = (int) out_jets_.size();
     for (unsigned int i = 0; i < out_jets_.size(); i++){
+        
         v_jet_m_.push_back( out_jets_[i].m() );
         v_jet_pt_.push_back( out_jets_[i].pt() );        
         v_jet_eta_.push_back( out_jets_[i].eta() );                
+        v_jet_phi_.push_back( out_jets_[i].phi() );  
+        
+        // trim jet
+        fastjet::PseudoJet trimmedJet = (trimmer)(out_jets_.at(i));
+        v_jet_m_trimmed_.push_back( trimmedJet.m() );
+
+        // 4-vector subtraction
+        PseudoJet pCorrJet = out_jets_.at(i);        
+        PseudoJet pArea = out_jets_.at(i).area_4vector();
+        pCorrJet -= lGrid.rho() * pArea;
+        v_jet_m_4Vcorr_.push_back(pCorrJet.m());
+        v_jet_pt_4Vcorr_.push_back(pCorrJet.pt());
+        v_jet_eta_4Vcorr_.push_back(pCorrJet.eta());
+        v_jet_phi_4Vcorr_.push_back(pCorrJet.phi());   
+        
     }
+    
+    // do cleansing
+    bool doCleansing = false; 
+    JetCleanser linear_cleanser_B(0.25, JetCleanser::linear_cleansing, JetCleanser::input_nc_separate);
+    linear_cleanser_B.SetLinearParameters(0.65);
+    vector<PseudoJet> p_chLV;
+    vector<PseudoJet> p_chPU;
+    vector<PseudoJet> p_neut;    
+    for (unsigned int i = 0; i < constits.size(); i++){
+        if (constits[i].user_index() == 1) p_neut.push_back(constits[i]);
+        else if (constits[i].user_index() == 2) p_chLV.push_back(constits[i]);
+        else if (constits[i].user_index() == 3) p_chPU.push_back(constits[i]);        
+        else continue;
+    }
+    if (p_chPU.size() > 0) doCleansing = true;
+    
+    if (doCleansing){
+        vector< vector<fastjet::PseudoJet> > sets;
+        sets.push_back( constits );           // calorimeter cells
+        sets.push_back( p_chLV );             // tracks from primary interaction
+        sets.push_back( p_chPU );             // tracks from pileup
+        sets.push_back( p_neut );             // neutral particles
+        
+        // collect jets
+        vector< vector<fastjet::PseudoJet> > jet_sets = ClusterSets(jetDef, constits, sets, 25.0);
+        vector<fastjet::PseudoJet> jets_plain     = jet_sets[0];
+        vector<fastjet::PseudoJet> jets_tracks_LV = jet_sets[1];
+        vector<fastjet::PseudoJet> jets_tracks_PU = jet_sets[2];
+        vector<fastjet::PseudoJet> jets_neutrals  = jet_sets[3];
+        
+        for (unsigned int i=0; i<jets_plain.size(); i++){
+            PseudoJet plain_jet = jets_plain[i];
+            PseudoJet lin_cleansed_jet = linear_cleanser_B( jets_neutrals[i].constituents(), jets_tracks_LV[i].constituents(), jets_tracks_PU[i].constituents() );
+            v_jet_m_cleansed_.push_back(lin_cleansed_jet.m());
+            v_jet_pt_cleansed_.push_back(lin_cleansed_jet.pt());
+            v_jet_eta_cleansed_.push_back(lin_cleansed_jet.eta());
+            v_jet_phi_cleansed_.push_back(lin_cleansed_jet.phi());                           
+        }
+    }    
     
     // event quantities    
     tree.Fill();

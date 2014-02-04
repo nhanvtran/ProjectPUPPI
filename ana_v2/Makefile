@@ -15,7 +15,7 @@ CC = c++
 all: puppiAnalyzer
 
 puppiAnalyzer: puppiAnalyzer.cpp
-	$(CC) -o puppiAnalyzer $(ROOTINC) $(FASTJETINC) $(FASTJETLIB) -lvectorDict puppiAnalyzer.cpp puppiContainer.cc puppiContainer.hh NoTrees.cc NoTrees.hh -I.
+	$(CC) -o puppiAnalyzer $(ROOTINC) $(FASTJETINC) $(FASTJETLIB) -lvectorDict -lJetCleanser puppiAnalyzer.cpp puppiContainer.cc puppiContainer.hh NoTrees.cc NoTrees.hh -I.
 
 clean:
 	rm puppiAnalyzer
