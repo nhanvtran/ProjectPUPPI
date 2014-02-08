@@ -304,10 +304,10 @@ double puppi_within_R(const vector<PseudoJet> & particles, const PseudoJet& cent
         //=>if(!iMass) puppi += min(near_particles[i].pt(),centre.pt())*pDR;//log(pDR/lE);
         //if(!iMass) puppi += log(max(near_particles[i].pt(),centre.pt())/pDR);//log(pDR/lE);
        
-        //puppi += log(near_particles[i].pt()/pDR);
-        puppi += log(near_particles[i].pt()*centre.pt()/pDR/pDR);
+        puppi += log(near_particles[i].pt()/pDR);
+        //puppi += log(near_particles[i].pt()*centre.pt()/pDR/pDR);
         
-        if(iMass) puppi += max(near_particles[i].pt(),centre.pt())*max(near_particles[i].pt(),centre.pt())/pDR/pDR;//*(near_particles[i]+centre).pt()*(near_particles[i]+centre).pt();
+        //if(iMass) puppi += max(near_particles[i].pt(),centre.pt())*max(near_particles[i].pt(),centre.pt())/pDR/pDR;//*(near_particles[i]+centre).pt()*(near_particles[i]+centre).pt();
         
     }
     
