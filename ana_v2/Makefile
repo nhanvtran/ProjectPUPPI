@@ -26,4 +26,5 @@ puppiMetAnalyzer: puppiMetAnalyzer.cpp puppiCleanContainer.cc puppiTMVAContainer
 clean:
 	rm puppiAnalyzer
 	rm puppiJetAnalyzer
+	rm puppiMetAnalyzer
     
