@@ -138,9 +138,12 @@ std::vector<fastjet::PseudoJet> puppiTMVAContainer::puppiEvent     (int iOpt,dou
     if(fVtx) fPuppiOLV = _vals[i0+3.*lNEvents];
     double pWeight = fReader->EvaluateMVA("BDT");
     pWeight += 1; pWeight *=0.5;
+    if(_pfParticles[i0].user_index() == 2) pWeight = 1;  
+    if(_pfParticles[i0].user_index() == 3) pWeight = 0;
+    if(_pfParticles[i0].user_index() <  2 && fPt < 1.5) pWeight = 0; 
     //if(pWeight < 0.5) pWeight = 0; 
     if(pWeight < 0.1) continue;
-    //pWeight = 1;
+    pWeight = 1;
     PseudoJet curjet( pWeight*_pfParticles[i0].px(), pWeight*_pfParticles[i0].py(), pWeight*_pfParticles[i0].pz(), pWeight*_pfParticles[i0].e());
     particles.push_back(curjet);
   }
