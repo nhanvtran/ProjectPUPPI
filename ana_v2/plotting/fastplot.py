@@ -176,9 +176,9 @@ if __name__ == '__main__':
     file = ROOT.TFile("../output/outtree_80.root");
     tree = file.Get("tree_particles");
     
-    hlo =  -0.5;
-    hhi =  1.5;
-    nbins = 1000;
+    hlo =  -0.1;
+    hhi =  1.1;
+    nbins = 100;
 #    
 #    weights_PU_all = ROOT.TH1F("weights_PU_all",";weights;count",100,-10,10);
 #    weights_LV_all = ROOT.TH1F("weights_LV_all",";weights;count",100,-10,10);
@@ -204,11 +204,11 @@ if __name__ == '__main__':
 #    makeCanvas( [weights_LV_chLV,weights_PU_chLV], ["LV #beta2","PU #beta2"], "puppi_chLV" );
 
     # for ch only
-    weights_all_all = ROOT.TH1F("weights_all","; weight; count", nbins, hlo, hhi);
-    weights_PU_all = ROOT.TH1F("weights_PU_all","; weight; count", nbins, hlo, hhi);
-    weights_LV_all = ROOT.TH1F("weights_LV_all","; weight; count", nbins, hlo, hhi);        
-    weights_nePU_all = ROOT.TH1F("weights_nePU_all","; weight; count", nbins, hlo, hhi);
-    weights_neLV_all = ROOT.TH1F("weights_neLV_all","; weight; count", nbins, hlo, hhi);        
+    weights_all_pfchs = ROOT.TH1F("weights_pfchs","; weight; count", nbins, hlo, hhi);
+    weights_PU_pfchs = ROOT.TH1F("weights_PU_pfchs","; weight; count", nbins, hlo, hhi);
+    weights_LV_pfchs = ROOT.TH1F("weights_LV_pfchs","; weight; count", nbins, hlo, hhi);        
+    weights_nePU_pfchs = ROOT.TH1F("weights_nePU_pfchs","; weight; count", nbins, hlo, hhi);
+    weights_neLV_pfchs = ROOT.TH1F("weights_neLV_pfchs","; weight; count", nbins, hlo, hhi);        
 
     weights_all_chLV = ROOT.TH1F("weights_chLV","; weight; count", nbins, hlo, hhi);
     weights_PU_chLV = ROOT.TH1F("weights_PU_chLV","; weight; count", nbins, hlo, hhi);
@@ -216,11 +216,11 @@ if __name__ == '__main__':
     weights_nePU_chLV = ROOT.TH1F("weights_nePU_chLV","; weight; count", nbins, hlo, hhi);
     weights_neLV_chLV = ROOT.TH1F("weights_neLV_chLV","; weight; count", nbins, hlo, hhi);        
 
-    weights_all_comb = ROOT.TH1F("weights_all_comb","; weight; count", nbins, hlo, hhi);
-    weights_PU_comb = ROOT.TH1F("weights_PU_comb","; weight; count", nbins, hlo, hhi);
-    weights_LV_comb = ROOT.TH1F("weights_LV_comb","; weight; count", nbins, hlo, hhi);        
-    weights_nePU_comb = ROOT.TH1F("weights_nePU_comb","; weight; count", nbins, hlo, hhi);
-    weights_neLV_comb = ROOT.TH1F("weights_neLV_comb","; weight; count", nbins, hlo, hhi);        
+    weights_all_all = ROOT.TH1F("weights_all_all","; weight; count", nbins, hlo, hhi);
+    weights_PU_all = ROOT.TH1F("weights_PU_all","; weight; count", nbins, hlo, hhi);
+    weights_LV_all = ROOT.TH1F("weights_LV_all","; weight; count", nbins, hlo, hhi);        
+    weights_nePU_all = ROOT.TH1F("weights_nePU_all","; weight; count", nbins, hlo, hhi);
+    weights_neLV_all = ROOT.TH1F("weights_neLV_all","; weight; count", nbins, hlo, hhi);        
 
     weights_LV_allVschLV = ROOT.TH2F("weights_LV_allVschLV",";shape;LV",nbins,hlo,hhi,nbins,hlo,hhi);
     weights_PU_allVschLV = ROOT.TH2F("weights_PU_allVschLV",";shape;LV",nbins,hlo,hhi,nbins,hlo,hhi);
@@ -230,52 +230,54 @@ if __name__ == '__main__':
         cur_pt = math.sqrt(tree.p_px*tree.p_px + tree.p_py*tree.p_py);
         
         if cur_pt > 1:
-            weights_all_all.Fill( tree.p_puppiW );
+            weights_all_pfchs.Fill( tree.p_puppiW_pfchs);
             weights_all_chLV.Fill( tree.p_puppiW_chLV );
-            weights_all_comb.Fill( tree.p_puppiW_comb );            
+            weights_all_all.Fill( tree.p_puppiW_all );            
 
         if cur_pt > 1 and tree.p_isPU == 0 and tree.p_isCH == 0:
-            weights_neLV_all.Fill( tree.p_puppiW );
+            weights_neLV_pfchs.Fill( tree.p_puppiW_pfchs);
             weights_neLV_chLV.Fill( tree.p_puppiW_chLV );
-            weights_neLV_comb.Fill( tree.p_puppiW_comb );                        
+            weights_neLV_all.Fill( tree.p_puppiW_all );                        
 
         if tree.p_isCH <= 1 and tree.p_isPU == 0 and cur_pt > 1:
-            weights_LV_all.Fill( tree.p_puppiW );
+            weights_LV_pfchs.Fill( tree.p_puppiW_pfchs);
             weights_LV_chLV.Fill( tree.p_puppiW_chLV );
-            weights_LV_comb.Fill( tree.p_puppiW_comb );   
-            weights_LV_allVschLV.Fill( tree.p_puppiW, tree.p_puppiW_chLV );
+            weights_LV_all.Fill( tree.p_puppiW_all );   
+
+            weights_LV_allVschLV.Fill( tree.p_puppiW_all, tree.p_puppiW_chLV );
                                                                               
         if tree.p_isPU == 1 and tree.p_isCH == 0 and cur_pt > 1: 
-            weights_nePU_all.Fill( tree.p_puppiW );
+            weights_nePU_pfchs.Fill( tree.p_puppiW_pfchs);
             weights_nePU_chLV.Fill( tree.p_puppiW_chLV );                    
-            weights_nePU_comb.Fill( tree.p_puppiW_comb );                    
+            weights_nePU_all.Fill( tree.p_puppiW_all );                    
        
         if tree.p_isCH <= 1 and tree.p_isPU == 1 and cur_pt > 1:
-            weights_PU_all.Fill( tree.p_puppiW );
+            weights_PU_pfchs.Fill( tree.p_puppiW_pfchs);
             weights_PU_chLV.Fill( tree.p_puppiW_chLV );
-            weights_PU_comb.Fill( tree.p_puppiW_comb );
-            weights_PU_allVschLV.Fill( tree.p_puppiW, tree.p_puppiW_chLV );    
+            weights_PU_all.Fill( tree.p_puppiW_all );
 
-    cutOn = findEqualTailProbabilities(weights_LV_chLV,weights_PU_chLV);
-    print "cutOn = ", cutOn;
+            weights_PU_allVschLV.Fill( tree.p_puppiW_all, tree.p_puppiW_chLV );    
 
-    makeCanvas( [weights_LV_all,weights_PU_all],   ["LV #Sigma all", "PU #Sigma all"], "puppi_allOnAll", True );        
-    makeCanvas( [weights_LV_chLV,weights_PU_chLV], ["LV #Sigma chLV","PU #Sigma chLV"], "puppi_allOnchLV", True );        
-    makeCanvas( [weights_LV_comb,weights_PU_comb], ["LV #Sigma comb","PU #Sigma comb"], "puppi_allOnchPU", True );        
+#    cutOn = findEqualTailProbabilities(weights_LV_chLV,weights_PU_chLV);
+#    print "cutOn = ", cutOn;
+
+    makeCanvas( [weights_LV_pfchs,weights_PU_pfchs],   ["LV #Sigma pfchs", "PU #Sigma pfchs"], "puppi_pfchs", True );        
+    makeCanvas( [weights_LV_chLV,weights_PU_chLV], ["LV #Sigma chLV","PU #Sigma chLV"], "puppi_chLV", True );        
+    makeCanvas( [weights_LV_all,weights_PU_all], ["LV #Sigma all","PU #Sigma all"], "puppi_all", True );        
 
     makeSingleHistCanvas(weights_LV_allVschLV);
     makeSingleHistCanvas(weights_PU_allVschLV);
 
-    roc_shape = makeROCFromHisto(weights_LV_all,weights_PU_all, True);
+    roc_pfchs = makeROCFromHisto(weights_LV_pfchs,weights_PU_pfchs, True);
     roc_chLV = makeROCFromHisto(weights_LV_chLV,weights_PU_chLV, True);
-    roc_chPU = makeROCFromHisto(weights_LV_comb,weights_PU_comb, True);
+    roc_all = makeROCFromHisto(weights_LV_all,weights_PU_all, True);
 #    roc_ch = makeROCFromHisto(weights_PU_ch,weights_LV_ch, True);
 #    roc_chLV_shape = makeROCFromHisto(weights_PU_chLV_shape,weights_LV_chLV_shape, True);
 #    roc_chLV_shape_prod = makeROCFromHisto(weights_PU_chLV_shape_prod,weights_LV_chLV_shape_prod, False);
 #    roc_all = makeROCFromHisto(weights_PU_all,weights_LV_all, True);
 #    
-    rocs = [roc_shape,roc_chLV,roc_chPU];
-    rocNames = ["shape","chLV","combined"];
+    rocs = [roc_pfchs,roc_chLV,roc_all];
+    rocNames = ["pfchs","chLV","all"];
     #rocs = [roc_chLV]
     #rocNames = ["puppi tracks"];
 

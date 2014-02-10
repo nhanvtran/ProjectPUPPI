@@ -23,7 +23,7 @@ puppiContainer::puppiContainer(std::vector<fastjet::PseudoJet> inParticles, std:
     _chargedLV.resize(0);    
     _chargedPU.resize(0);    
     
-        
+    
     double etaTracker = 5.;
     double userIndex_isPuCh = -1;
     for (unsigned int i = 0; i < inParticles.size(); i++){
@@ -31,10 +31,10 @@ puppiContainer::puppiContainer(std::vector<fastjet::PseudoJet> inParticles, std:
         float weightPFCHS = 0.;
         
         // fill vector of pseudojets
-        if (fabs(inParticles[i].eta()) < 5 && inParticles[i].pt() > 0.2){        
+        if (fabs(inParticles[i].eta()) < 5 && inParticles[i].pt() > 0.0){        
             
             PseudoJet curjet(inParticles[i].px(), inParticles[i].py(), inParticles[i].pz(), inParticles[i].e());
-            curjet.set_user_index( -1 );
+            curjet.set_user_index( -99 );
             
             if (isPU[i] == 0){
                 weightGEN = 1.;
@@ -45,6 +45,7 @@ puppiContainer::puppiContainer(std::vector<fastjet::PseudoJet> inParticles, std:
             }
             if (weightGEN > 0){
                 PseudoJet curjetGEN( weightGEN*inParticles[i].px(), weightGEN*inParticles[i].py(), weightGEN*inParticles[i].pz(), weightGEN*inParticles[i].e());
+                curjetGEN.set_user_index( 0 );
                 _genParticles.push_back( curjetGEN );
             }
             if (weightPFCHS > 0){
@@ -53,16 +54,17 @@ puppiContainer::puppiContainer(std::vector<fastjet::PseudoJet> inParticles, std:
                 
                 if (isCh[i] == 0){
                     _neutrals.push_back( curjet );
-                    userIndex_isPuCh = 1;
+                    if (isPU[i] == 0) userIndex_isPuCh = -1;
+                    else userIndex_isPuCh = 1;
                 }
                 else{
                     _chargedLV.push_back( curjet );
-                    userIndex_isPuCh = 2;                    
+                    userIndex_isPuCh = 0;                    
                 }
             }
             if (weightPFCHS == 0){
                 _chargedPU.push_back( curjet );
-                userIndex_isPuCh = 3;                
+                userIndex_isPuCh = 2;                
             }
             
             _isPFCHS.push_back( weightPFCHS );
@@ -73,32 +75,13 @@ puppiContainer::puppiContainer(std::vector<fastjet::PseudoJet> inParticles, std:
         }
     }
     
-    puppiWeights.resize(0);
+    puppiWeights_pfchs.resize(0);
     puppiWeights_chLV.resize(0);
-    puppiWeights_combined.resize(0);
+    puppiWeights_all.resize(0);
     cleansedWeights.resize(0);    
 }
 
 puppiContainer::~puppiContainer(){}
-
-
-std::vector<fastjet::PseudoJet> puppiContainer::pfParticles(){ 
-    std::vector<PseudoJet> answer;
-    answer.resize(0);
-    for (unsigned int i = 0; i < _pfParticles.size(); i++){
-        PseudoJet curjet(_pfParticles[i].px(), 
-                         _pfParticles[i].py(), 
-                         _pfParticles[i].pz(), 
-                         _pfParticles[i].e());
-        curjet.set_user_index(_isPU[i]);
-        answer.push_back( curjet ); 
-    }
-    return answer; 
-}    
-std::vector<fastjet::PseudoJet> puppiContainer::pfchsParticles(){ 
-    return _pfchsParticles; 
-}  
-
 
 std::vector<fastjet::PseudoJet> puppiContainer::trimEvent(double vRjet, double vptcut, double vRsub, double vfcut ){
     
@@ -170,7 +153,7 @@ std::vector<fastjet::PseudoJet> puppiContainer::puppiEvent_V1( double Rsub, doub
     
     std::vector<PseudoJet> answer;
     answer.resize(0);
-    puppiWeights.resize(0);
+    puppiWeights_all.resize(0);
     
     // -- puppi cleansing parameters -- 
     double Rsub_cleansing = Rsub;
@@ -194,30 +177,32 @@ std::vector<fastjet::PseudoJet> puppiContainer::puppiEvent_V1( double Rsub, doub
             PseudoJet curjet( weight1*_pfParticles[i].px(), weight1*_pfParticles[i].py(), weight1*_pfParticles[i].pz(), weight1*_pfParticles[i].e());
             answer.push_back( curjet );
         }
-        puppiWeights.push_back( weight1 );    
+        puppiWeights_all.push_back( weight1 );    
     }
     
     return answer;
 }
 
 std::vector<fastjet::PseudoJet> puppiContainer::puppiEvent(int iPU){
-            
+    
     double Rsub = 0.3;///Using 0.3 radius
     std::vector<PseudoJet> answer;
     answer.resize(0);
     std::vector<double> lVals;
     std::vector<double> lValsPV;
-    double min_lVals = 999;
-    double min_lValsPV = 999;
+    std::vector<double> lValsAll;
     
     std::vector<double> lValsAPV;
     std::vector<double> lValsAPU;
+    std::vector<double> lValsAAll;    
     double lAvgPV = 0; 
     double lAvgPU = 0; 
+    double lAvgAll = 0; 
     for(unsigned int i=0; i<_pfParticles.size(); i++){
-                
+        
         double puppi_Rsub = puppi_within_R(_pfchsParticles,_pfParticles[i],Rsub,false);      
         double puppi_RsubPV = puppi_within_R(_chargedLV,_pfParticles[i],Rsub,false);   
+        double puppi_RsubAll = puppi_within_R(_pfParticles,_pfParticles[i],Rsub,false);   
         
 //        // downweighting for soft particles near hard particles
 //        double pt_Rsub = pt_within_R(_pfParticles,_pfParticles[i],Rsub);
@@ -228,69 +213,76 @@ std::vector<fastjet::PseudoJet> puppiContainer::puppiEvent(int iPU){
         
         lVals.push_back(puppi_Rsub);
         lValsPV.push_back(puppi_RsubPV);
-//        std::cout << "puppi_Rsub = " << puppi_Rsub << std::endl;
-        if (puppi_Rsub < min_lVals) min_lVals = puppi_Rsub;
-        if (puppi_RsubPV < min_lValsPV) min_lValsPV = puppi_RsubPV;        
-        
+        lValsAll.push_back(puppi_RsubAll);
+                
         //Was applying a pt cut
         if(_pfParticles[i].pt() > 0.2 && _isCh[i]) { 
             if(_isPU[i]) lValsAPV.push_back(puppi_RsubPV);
             if(_isPU[i]) lValsAPU.push_back(puppi_Rsub);
+            if(_isPU[i]) lValsAAll.push_back(puppi_RsubAll);
         }
-            
+        
     }
-     
-//    //shift to make positive-definite
-//    for(int i0 = 0; i0 < lVals.size(); i0++) { 
-//        lVals[i0] -= min_lVals;
-//        lValsPV[i0] -= min_lValsPV;
-//    }
+    
+    //    //shift to make positive-definite
+    //    for(int i0 = 0; i0 < lVals.size(); i0++) { 
+    //        lVals[i0] -= min_lVals;
+    //        lValsPV[i0] -= min_lValsPV;
+    //    }
     
     //Median
     std::sort (lValsAPV.begin(),lValsAPV.end());  
     std::sort (lValsAPU.begin(),lValsAPU.end());  
+    std::sort (lValsAAll.begin(),lValsAAll.end());  
     lAvgPV = lValsAPV[int(lValsAPV.size()/2.+0.5)];
     lAvgPU = lValsAPU[int(lValsAPU.size()/2.+0.5)];
+    lAvgAll = lValsAAll[int(lValsAAll.size()/2.+0.5)];
     //RMS
     double lRMSPU = 0; 
     for(int i0 = 0 ;i0 < lValsAPU.size(); i0++) {lRMSPU += (lValsAPU[i0]-lAvgPU)*(lValsAPU[i0]-lAvgPU);}
     double lRMSPV = 0; 
     for(int i0 = 0 ;i0 < lValsAPV.size(); i0++) {lRMSPV += (lValsAPV[i0]-lAvgPV)*(lValsAPV[i0]-lAvgPV);}
+    double lRMSAll = 0; 
+    for(int i0 = 0 ;i0 < lValsAAll.size(); i0++) {lRMSAll += (lValsAAll[i0]-lAvgAll)*(lValsAAll[i0]-lAvgAll);}
+    
     if(lValsAPV.size() > 0) lRMSPV/=lValsAPV.size(); 
     if(lValsAPU.size() > 0) lRMSPU/=lValsAPU.size(); 
-        
-//    std::cout << "min_lVals = " << min_lVals << std::endl;
-//    std::cout << "min_lValsPV = " << min_lValsPV << std::endl;
+    if(lValsAAll.size() > 0) lRMSAll/=lValsAAll.size(); 
+    
+    //    std::cout << "min_lVals = " << min_lVals << std::endl;
+    //    std::cout << "min_lValsPV = " << min_lValsPV << std::endl;
     
     //Particles
-    int curjetCtr = 0;
     for(int i0 = 0; i0 < lVals.size(); i0++) { 
         
         double pWeight = lVals[i0];
         double pWeight1 = lValsPV[i0];
-        double pWeight2 = lValsPV[i0];
+        double pWeight2 = lValsAll[i0];
         
-        double chiWeight1 = (lVals[i0]-lAvgPU)/sqrt(lRMSPU)*((lVals[i0]-lAvgPU)/sqrt(lRMSPU)); 
-        double chiWeight2 = (lValsPV[i0]-lAvgPV)/sqrt(lRMSPV)*(lValsPV[i0]-lAvgPV)/sqrt(lRMSPV); 
-        pWeight = ROOT::Math::chisquared_cdf(chiWeight1+chiWeight2,2.);
+        double chiWeight = (lVals[i0]-lAvgPU)/sqrt(lRMSPU)*((lVals[i0]-lAvgPU)/sqrt(lRMSPU)); 
+        double chiWeight1 = (lValsPV[i0]-lAvgPV)/sqrt(lRMSPV)*(lValsPV[i0]-lAvgPV)/sqrt(lRMSPV); 
+        double chiWeight2 = (lValsAll[i0]-lAvgAll)/sqrt(lRMSAll)*((lValsAll[i0]-lAvgAll)/sqrt(lRMSAll)); 
+        pWeight = ROOT::Math::chisquared_cdf(chiWeight,1.);
         pWeight1 = ROOT::Math::chisquared_cdf(chiWeight1,1.);
         pWeight2 = ROOT::Math::chisquared_cdf(chiWeight2,1.);
-
+        
         //std::cout << "pWeight2 = " << pWeight2 << std::endl;
         
-        puppiWeights.push_back(pWeight1);
-        puppiWeights_chLV.push_back(pWeight2);    
-        puppiWeights_combined.push_back(pWeight);    
+        puppiWeights_pfchs.push_back(pWeight);
+        puppiWeights_chLV.push_back(pWeight1);    
+        puppiWeights_all.push_back(pWeight2);    
         
-        if (pWeight2 > 0.80){
+        int isChPU = 0;
+        if (_isPU[i0]==1 && _isCh[i0]==1) isChPU = 1;
+        
+        if (pWeight1 > 0.80 and isChPU == 0){
             //pWeight2 = 1.;
-            PseudoJet curjet(pWeight2*_pfParticles[i0].px(), 
-                             pWeight2*_pfParticles[i0].py(), 
-                             pWeight2*_pfParticles[i0].pz(), 
-                             pWeight2*_pfParticles[i0].e());
-            curjet.set_user_index(_isPU[i0]);
+            PseudoJet curjet(pWeight*_pfParticles[i0].px(), 
+                             pWeight*_pfParticles[i0].py(), 
+                             pWeight*_pfParticles[i0].pz(), 
+                             pWeight*_pfParticles[i0].e());
+            curjet.set_user_index(_isPU[i0]);            
             answer.push_back( curjet );
-            curjetCtr++;
         }
     }
     
@@ -352,4 +344,3 @@ double puppiContainer::getRMS(const vector<double> & particles){
 
 
 //FASTJET_END_NAMESPACE
-
