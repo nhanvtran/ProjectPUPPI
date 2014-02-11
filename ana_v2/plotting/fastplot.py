@@ -173,11 +173,13 @@ def findEqualTailProbabilities(h1,h2):
 
 if __name__ == '__main__':
 
-    file = ROOT.TFile("../output/outtree_80.root");
+    file = ROOT.TFile("../output/outtree_80_TKeta25.root");
     tree = file.Get("tree_particles");
     
     hlo =  -0.1;
     hhi =  1.1;
+#    hlo =  -50;
+#    hhi =  200;
     nbins = 100;
 #    
 #    weights_PU_all = ROOT.TH1F("weights_PU_all",";weights;count",100,-10,10);

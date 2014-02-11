@@ -47,6 +47,12 @@ void setTDRStyle();
 /////////////////////////////////////////////////////////////////////
 ifstream fin;
 int njets_;
+int njets_corr_;
+
+float sumEt_;
+float etMissX_;
+float etMissY_;
+
 std::vector<float> v_jet_m_;
 std::vector<float> v_jet_pt_;
 std::vector<float> v_jet_eta_;
@@ -73,6 +79,12 @@ void plotEvent( std::vector < fastjet::PseudoJet > constits, char* name, std::ve
 
 void initVars(){
     njets_ = -1.;
+    njets_corr_ = -1.;
+    
+    sumEt_ = -1.;
+    etMissX_ = -1.;
+    etMissY_ = -1.;    
+    
     v_jet_m_.clear();
     v_jet_pt_.clear();    
     v_jet_eta_.clear(); 
@@ -87,6 +99,12 @@ void initVars(){
 void addBranches( TTree &tree ){
 
     tree.Branch("njets",&njets_);
+    tree.Branch("njets_corr",&njets_corr_);
+    
+    tree.Branch("sumEt",&sumEt_);
+    tree.Branch("etMissX",&etMissX_);
+    tree.Branch("etMissY",&etMissY_);
+    
     tree.Branch("v_jet_m",&v_jet_m_);
     tree.Branch("v_jet_pt",&v_jet_pt_);
     tree.Branch("v_jet_eta",&v_jet_eta_);  
@@ -185,11 +203,15 @@ int main( int argc, char **argv ) {
             puppiContainer curEvent(allParticles, v_isPU, v_isCh);
             std::vector<fastjet::PseudoJet> genParticles = curEvent.genParticles();
             std::vector<fastjet::PseudoJet> pfParticles = curEvent.pfParticles();
-            //std::vector<fastjet::PseudoJet> pfchsParticles = curEvent.pfchsParticles();
+            std::vector<fastjet::PseudoJet> pfchsParticles = curEvent.pfchsParticles();
             //std::vector<fastjet::PseudoJet> trimmedParticles = curEvent.trimEvent();
             //std::vector<fastjet::PseudoJet> cleansedParticles = curEvent.cleanseEvent(0.3);
             //std::vector<fastjet::PseudoJet> puppiParticles = curEvent.puppiEvent(0.5,2.);
             std::vector<fastjet::PseudoJet> puppiParticles = curEvent.puppiEvent(80);
+            
+//            for (unsigned int kk = 0; kk < puppiParticles.size(); kk++){
+//                std::cout << "puppiParticles.user_index() = " << puppiParticles[kk].user_index() << std::endl;
+//            }
             
             char canvname[150];
                         
@@ -198,8 +220,8 @@ int main( int argc, char **argv ) {
             std::vector<fastjet::PseudoJet> genJets = analyzeEvent( genParticles, *tree_gen, canvname, 0.7 );
             initVars();
             std::vector<fastjet::PseudoJet> pfJets = analyzeEvent( pfParticles, *tree_pf, canvname, 0.7 );
-            //            initVars();
-            //            analyzeEvent( curEvent.pfchsParticles(), *tree_pfchs, canvname, 0.7 );
+            initVars();
+            std::vector<fastjet::PseudoJet> pfchsJets = analyzeEvent( curEvent.pfchsParticles(), *tree_pfchs, canvname, 0.7 );
             //            initVars();
             //            analyzeEvent( trimmedParticles, *tree_pf_tr, canvname, 0.7 );
             //            initVars();
@@ -210,32 +232,34 @@ int main( int argc, char **argv ) {
             
             
             if (nEvts < 25 and nEvts > 0){
-                
+                                                
                 std::vector<float> puppiWeights_pfchs = curEvent.getPuppiWeights_pfchs();
                 std::vector<float> puppiWeights_chLV = curEvent.getPuppiWeights_chLV();                
                 std::vector<float> puppiWeights_all = curEvent.getPuppiWeights_all();                
                 /////std::vector<float> cleansedWeights = curEvent.getCleansedWeights();    
                 // fill weights
-                for (unsigned int a = 0; a < allParticles.size(); a++){
-                    p_isPU = v_isPU[a];
-                    p_isCH = v_isCh[a];                    
-                    p_px = allParticles[a].px();
-                    p_py = allParticles[a].py();
-                    p_pz = allParticles[a].pz();
-                    p_e = allParticles[a].e();
-                    p_puppiW_pfchs = puppiWeights_pfchs[a];
-                    p_puppiW_chLV = puppiWeights_chLV[a];
-                    p_puppiW_all = puppiWeights_all[a];                                        
+                for (unsigned int a = 0; a < pfParticles.size(); a++){
+                    if (pfParticles[a].user_index() == 1 || pfParticles[a].user_index() == 3) p_isPU = 1;
+                    else p_isPU = 0;
+                    if (pfParticles[a].user_index() == 2 || pfParticles[a].user_index() == 3) p_isCH = 1;
+                    else p_isCH = 0;
+                    p_px = pfParticles[a].px();
+                    p_py = pfParticles[a].py();
+                    p_pz = pfParticles[a].pz();
+                    p_e = pfParticles[a].e();
+//                    p_puppiW_pfchs = puppiWeights_pfchs[a];
+//                    p_puppiW_chLV = puppiWeights_chLV[a];
+//                    p_puppiW_all = puppiWeights_all[a];                                        
                     /////p_cleansedW = cleansedWeights[a];            
                     tree_particles->Fill();
                 }
-                
+                                
                 sprintf( canvname, "displays/dis_gen_%i_%i", nEvts, PUscenario );
                 plotEvent( genParticles, canvname, genJets );
                 sprintf( canvname, "displays/dis_pf_%i_%i", nEvts, PUscenario );
                 plotEvent( pfParticles, canvname, pfJets);
-                //                sprintf( canvname, "displays/dis_pfchs_%i_%i", nEvts, PUscenario );
-                //                plotEvent( pfchsParticles, canvname );                
+                sprintf( canvname, "displays/dis_pfchs_%i_%i", nEvts, PUscenario );
+                plotEvent( pfchsParticles, canvname, pfchsJets );                
                 //                sprintf( canvname, "displays/dis_pf_tr_%i_%i", nEvts, PUscenario );
                 //                plotEvent( trimmedParticles, canvname );
                 //                sprintf( canvname, "displays/dis_pf_cl_%i_%i", nEvts, PUscenario );
@@ -251,7 +275,7 @@ int main( int argc, char **argv ) {
         }
         
         nEvts++;
-        if (nEvts % 1 == 0) std::cout << "event no. = " << nEvts << std::endl;
+        if (nEvts % 10 == 0) std::cout << "event no. = " << nEvts << std::endl;
         if (nEvts == maxEvents){ break; }
         
         if(fin.eof()) break;
@@ -306,28 +330,29 @@ void plotEvent( std::vector < fastjet::PseudoJet > constits, char* name, std::ve
     
     double maxCell = 0;
     
-    TH2F* h2d = new TH2F( "h2d",";#eta;#phi;e (GeV)",50, -5,5, 50,0,2*TMath::Pi() );
-    TH2F* h2d_PU = new TH2F( "h2d_PU",";#eta;#phi;e (GeV)",50, -5,5, 50,0,2*TMath::Pi() );
+    TH2F* h2d = new TH2F( "h2d",";#eta;#phi;pT (GeV)",50, -5,5, 50,0,2*TMath::Pi() );
+    TH2F* h2d_PU = new TH2F( "h2d_PU",";#eta;#phi;pT (GeV)",50, -5,5, 50,0,2*TMath::Pi() );
     
     for (unsigned int i = 0; i < constits.size(); i++){
         int curBin = h2d->FindBin(constits[i].eta(),constits[i].phi());
-        if (constits[i].e() > maxCell) maxCell = constits[i].e();
-        if (constits[i].user_index() >= 1) h2d_PU->SetBinContent( curBin, h2d_PU->GetBinContent(curBin) + constits[i].e() );        
-        else h2d->SetBinContent( curBin, h2d->GetBinContent(curBin) + constits[i].e() );
+        if (constits[i].pt() > maxCell) maxCell = constits[i].pt();
+
+        if (constits[i].user_index() == 1 || constits[i].user_index() == 3) h2d_PU->SetBinContent( curBin, h2d_PU->GetBinContent(curBin) + constits[i].pt() );        
+        else h2d->SetBinContent( curBin, h2d->GetBinContent(curBin) + constits[i].pt() );
         
     }
-    
+
     //std::cout << "maxCell = " << maxCell << std::endl;
     
     TCanvas* can = new TCanvas("can","can",1100,800);
     
     h2d->SetMaximum( 1.1*max(h2d->GetMaximum(),h2d_PU->GetMaximum()) );
-    h2d->SetMinimum( 0 );
-    h2d->SetLineWidth( 2 );
-    h2d->Draw("BOX");
-    h2d_PU->SetLineColor( 2 );
+    h2d->SetMinimum( 1e-1 );
+//    h2d->SetLineWidth( 2 );
+    h2d->Draw("COLZ");
+    h2d_PU->SetLineWidth( 1 );
     h2d_PU->Draw("BOX SAME");    
-    //can->SetLogz();
+    can->SetLogz();
 
     //draw jets
     for (unsigned j = 0; j < jets.size(); j++){
@@ -381,6 +406,7 @@ std::vector< fastjet::PseudoJet > analyzeEvent( std::vector < fastjet::PseudoJet
     fastjet::GridMedianBackgroundEstimator lGrid(5.0,0.8);
     lGrid.set_particles(constits);
     
+    njets_corr_ = 0;
     
     // ++++++++++++++++++++++++++++++++++++++++++++++++++++
     // FILL IN THE TREE
@@ -404,9 +430,22 @@ std::vector< fastjet::PseudoJet > analyzeEvent( std::vector < fastjet::PseudoJet
         v_jet_m_4Vcorr_.push_back(pCorrJet.m());
         v_jet_pt_4Vcorr_.push_back(pCorrJet.pt());
         v_jet_eta_4Vcorr_.push_back(pCorrJet.eta());
-        v_jet_phi_4Vcorr_.push_back(pCorrJet.phi());   
+        v_jet_phi_4Vcorr_.push_back(pCorrJet.phi());
         
+        if (v_jet_pt_4Vcorr_[i] > 25.0) njets_corr_++;        
     }
+    
+    // MET variables
+    float sumEt = 0;
+    PseudoJet METvec(0,0,0,0);
+    for (unsigned int i = 0; i < constits.size(); i++){
+        sumEt += constits[i].Et();
+        METvec += constits[i];
+    }
+    
+    sumEt_ = sumEt;
+    etMissX_ = fabs(-METvec.px());
+    etMissY_ = fabs(-METvec.py());
     
     // event quantities    
     tree.Fill();

@@ -318,6 +318,7 @@ double puppi_within_R(const vector<PseudoJet> & particles, const PseudoJet& cent
     return puppi;
 }
 
+
 //} // namespace contrib
 //
 //FASTJET_END_NAMESPACE

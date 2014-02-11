@@ -16,7 +16,7 @@ public:
     
     std::vector<fastjet::PseudoJet> genParticles(){ return _genParticles; }
     std::vector<fastjet::PseudoJet> pfParticles(){ return _pfParticles; }    
-    std::vector<fastjet::PseudoJet> pfchsParticles(){ return _pfchsParticles; }  
+    std::vector<fastjet::PseudoJet> pfchsParticles(){ return _pfchsParticlesToUse; }  
     
     std::vector<float> getPuppiWeights_pfchs(){ return puppiWeights_pfchs; };  
     std::vector<float> getPuppiWeights_chLV(){ return puppiWeights_chLV; };  
@@ -28,7 +28,7 @@ public:
     std::vector<fastjet::PseudoJet> cleanseEvent( double Rsub=0.3 );    
     std::vector<fastjet::PseudoJet> puppiEvent_V1( double Rsub=0.3, double exponent=2. );
     
-    std::vector<fastjet::PseudoJet> puppiEvent( int nPU );
+    std::vector<fastjet::PseudoJet> puppiEvent( int nPU, double iQuant=0.5 );
     
     
 protected:
@@ -39,8 +39,18 @@ protected:
     double pt_within_R(const vector<PseudoJet> & particles, const PseudoJet& centre, double R);
     double ktWeight_within_R(const vector<PseudoJet> & particles, const PseudoJet& centre, double R, double exponent);    
     
+    void discretize(std::vector<fastjet::PseudoJet> &discreteParticles,std::vector<fastjet::PseudoJet> &iParticles);
+    
+    double  goodVar  (fastjet::PseudoJet &iPart,std::vector<fastjet::PseudoJet> &iParts, int iOpt);        
+    void   getRMSAvg(int iOpt,std::vector<fastjet::PseudoJet> &iConstits,std::vector<fastjet::PseudoJet> &iParticles,std::vector<int> &iIsPU,double iQuant,double iPtRMS);
+    double  compute  (int iOpt,double iVal,double iMed,double iRMS);    
+    std::vector<double> _vals;
+    double fMed;
+    double fRMS;
+    
     std::vector<PseudoJet> _pfParticles;
     std::vector<PseudoJet> _pfchsParticles;    
+    std::vector<PseudoJet> _pfchsParticlesToUse;        
     std::vector<PseudoJet> _genParticles;
     
     std::vector<PseudoJet> _neutrals;
