@@ -13,20 +13,20 @@ public:
     // default ctor
     puppiCleanContainer(std::vector<PseudoJet> inParticles, std::vector<int> isPU, std::vector<int> isCh,bool iDiscretize=true); 
     ~puppiCleanContainer(); 
-    void discretize(std::vector<fastjet::PseudoJet> &discreteParticles,std::vector<fastjet::PseudoJet> &iParticles);
+    void discretize(std::vector<fastjet::PseudoJet> &discreteParticles,std::vector<fastjet::PseudoJet> &iParticles,bool iPtCut=false);
     std::vector<fastjet::PseudoJet> genParticles(){ return _genParticles; }
     std::vector<fastjet::PseudoJet> pfParticles(){ return _pfParticles; }    
     std::vector<fastjet::PseudoJet> pvParticles(){ return _chargedPV; }        
     std::vector<fastjet::PseudoJet> puParticles(){ return _chargedNoPV; }    
     std::vector<fastjet::PseudoJet> pfchsParticles(){ return _pfchsParticles; }    
-    std::vector<fastjet::PseudoJet> puppiEvent     (int iOpt,double iQuant);
+  std::vector<fastjet::PseudoJet> puppiEvent     (int iOpt,double iQuant);
     std::vector<fastjet::PseudoJet> trimEvent();
 
 protected:
         
   //Helper Functions
     double  goodVar  (fastjet::PseudoJet &iPart,std::vector<fastjet::PseudoJet> &iParts, int iOpt);    
-    void   getRMSAvg(int iOpt,std::vector<fastjet::PseudoJet> &iConstits,std::vector<fastjet::PseudoJet> &iParticles,std::vector<int> &iIsPU,double iQuant);
+  void   getRMSAvg(int iOpt,std::vector<fastjet::PseudoJet> &iConstits,std::vector<fastjet::PseudoJet> &iParticles,std::vector<int> &iIsPU,double iQuant,double iPtRMS);
     double  compute  (int iOpt,double iVal,double iMed,double iRMS);
     std::vector<PseudoJet> _pfParticles;
     std::vector<PseudoJet> _pfchsParticles;    

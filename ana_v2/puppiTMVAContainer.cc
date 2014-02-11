@@ -11,17 +11,24 @@ using namespace fastjet;
 //FASTJET_BEGIN_NAMESPACE      // defined in fastjet/internal/base.hh
 
 
-puppiTMVAContainer::puppiTMVAContainer(std::vector<fastjet::PseudoJet> inParticles, std::vector<int> isPU, std::vector<int> isCh,std::string iWeight,bool iVtx,bool iDiscretize) { 
+puppiTMVAContainer::puppiTMVAContainer(std::vector<fastjet::PseudoJet> inParticles, std::vector<int> isPU, std::vector<int> isCh,std::string iWeight,bool iVtx,bool iDiscretize,bool iCHS) { 
+  fCHS        = iCHS;
   fVtx        = iVtx;
   fDiscretize = iDiscretize;
   TMVA::Tools::Instance();
-  fReader = new TMVA::Reader( "!Color:!Silent" );    
+  fReader      = new TMVA::Reader( "!Color:!Silent" );    
+  fReaderNoVtx = new TMVA::Reader( "!Color:!Silent" );    
   fPt       = 0; fReader->AddVariable("pt"                 , &fPt);
   fPuppi    = 0; fReader->AddVariable("ptodR"              , &fPuppi);
   fPuppiO   = 0; fReader->AddVariable("ptodRSO"            , &fPuppiO);
   fPuppiLV  = 0; if(fVtx) fReader->AddVariable("ptodR_lv"           , &fPuppiLV);
   fPuppiOLV = 0; if(fVtx) fReader->AddVariable("ptodRSO_lv"         , &fPuppiOLV);
-  fReader->BookMVA("BDT",iWeight.c_str());
+  fReaderNoVtx->AddVariable("pt"                 , &fPt);
+  fReaderNoVtx->AddVariable("ptodR"              , &fPuppi);
+  fReaderNoVtx->AddVariable("ptodRSO"            , &fPuppiO);
+  fReader     ->BookMVA("BDT",iWeight.c_str());
+  TString lWeight = iWeight; lWeight.ReplaceAll("wvtx","novtx");
+  fReaderNoVtx->BookMVA("BDT",lWeight.Data());
   refresh(inParticles,isPU,isCh); 
 }
 void puppiTMVAContainer::refresh(std::vector<fastjet::PseudoJet> inParticles, std::vector<int> isPU, std::vector<int> isCh) { 
@@ -33,7 +40,6 @@ void puppiTMVAContainer::refresh(std::vector<fastjet::PseudoJet> inParticles, st
   _vals.resize(0); 
   _isPU = isPU;
   _isCh = isCh;
-
   for (unsigned int i = 0; i < inParticles.size(); i++){
     // fill vector of pseudojets
     if (fabs(inParticles[i].pt()) < 0.2) continue;        
@@ -41,19 +47,20 @@ void puppiTMVAContainer::refresh(std::vector<fastjet::PseudoJet> inParticles, st
     if (_isPU[i] == 0) _genParticles.push_back( inParticles[i] );            
     if (fabs(inParticles[i].user_index()) < 2 && fDiscretize)  continue;
     _pfParticles.push_back(inParticles[i]);
-    if ((_isPU[i] == 0) || (_isPU[i] == 1 && _isCh[i] == 0 && fabs(inParticles[i].eta()) < 2.5) || (isPU[i] == 1 && fabs(inParticles[i].eta()) > 2.5)){
+    if (inParticles[i].user_index() != 3) { 
       _pfchsParticles.push_back( inParticles[i] );
     }
-    if ((_isPU[i] == 0) && _isCh[i] == 1 && fabs(inParticles[i].eta()) < 12.5){
+    if (inParticles[i].user_index() == 2) { 
       _chargedPV.push_back( inParticles[i] );
     }
-    if ((_isPU[i] == 1) && _isCh[i] == 1  && fabs(inParticles[i].eta()) < 12.5){
+    if (inParticles[i].user_index() == 3) { 
       _chargedNoPV.push_back( inParticles[i] );
     }
   }
-  if(fDiscretize) discretize(_pfParticles,inParticles);
+  if(fDiscretize) discretize(_pfParticles   ,inParticles);
+  if(fDiscretize) discretize(_pfchsParticles,inParticles,true);
 }
-void puppiTMVAContainer::discretize(std::vector<fastjet::PseudoJet> &discreteParticles,std::vector<fastjet::PseudoJet> &iParticles) {
+void puppiTMVAContainer::discretize(std::vector<fastjet::PseudoJet> &discreteParticles,std::vector<fastjet::PseudoJet> &iParticles,bool iPtCut) {
   bool lGrid = false;
   //Discretize in 0.1x0.1
   TH2F* h2d      = new TH2F( "h2d"     ,";#eta;#phi;e (GeV)",100, -5,5, 63,0,2*TMath::Pi() ); //100 63
@@ -85,7 +92,9 @@ void puppiTMVAContainer::discretize(std::vector<fastjet::PseudoJet> &discretePar
       if(lJetsPU[i0].pt() > 0) pJet   += lJetsPU[i0];
       pJet.set_user_index(0);
       if(lJets[i0].pt() < lJetsPU[i0].pt() ) pJet.set_user_index(1);
-      if(pJet.pt() > 0.2) discreteParticles.push_back(pJet);
+      if(pJet.pt() < 0.2) continue; 
+      if(pJet.pt() < 1.0 && iPtCut) continue; 
+      discreteParticles.push_back(pJet);
     }
   }
   if(lGrid) { 
@@ -152,25 +161,27 @@ std::vector<fastjet::PseudoJet> puppiTMVAContainer::puppiEvent     (int iOpt,dou
   std::vector<PseudoJet> particles;
   //Run through all compute mean and RMS
   _vals.resize(0);
-  getRMSAvg(iOpt,_pfParticles,_pfParticles,_isPU,iQuant);
-  int lNEvents    = _vals.size();
-  getRMSAvg(6,_pfParticles,_pfParticles,_isPU,iQuant);
-  if(fVtx) getRMSAvg(iOpt,_pfParticles,_chargedPV,_isPU,iQuant);
-  if(fVtx) getRMSAvg(6   ,_pfParticles,_chargedPV,_isPU,iQuant);
+  int lNEvents    = _pfParticles.size();
+  if(!fCHS) getRMSAvg(iOpt,_pfParticles,_pfParticles,_isPU,iQuant);
+  if(!fCHS) getRMSAvg(6,_pfParticles,_pfParticles,_isPU,iQuant);
+  if(!fCHS && fVtx) getRMSAvg(iOpt,_pfParticles,_chargedPV,_isPU,iQuant);
+  if(!fCHS && fVtx) getRMSAvg(6   ,_pfParticles,_chargedPV,_isPU,iQuant);
   for(int i0 = 0; i0 < lNEvents; i0++) {
     fPt       = _pfParticles[i0].pt();
-    fPuppi    = _vals[i0+0.*lNEvents];
-    fPuppiO   = _vals[i0+1.*lNEvents];
-    if(fVtx) fPuppiLV  = _vals[i0+2.*lNEvents];
-    if(fVtx) fPuppiOLV = _vals[i0+3.*lNEvents];
-    double pWeight = fReader->EvaluateMVA("BDT");
-    pWeight += 1; pWeight *=0.5;
-    if(_pfParticles[i0].user_index() == 2) pWeight = 1;  
-    if(_pfParticles[i0].user_index() == 3) pWeight = 0;
-    if(_pfParticles[i0].user_index() <  2 && fPt < 1.5) pWeight = 0; 
-    //if(pWeight < 0.5) pWeight = 0; 
+    if(!fCHS) fPuppi    = _vals[i0+0.*lNEvents];
+    if(!fCHS) fPuppiO   = _vals[i0+1.*lNEvents];
+    if(!fCHS && fVtx) fPuppiLV  = _vals[i0+2.*lNEvents];
+    if(!fCHS && fVtx) fPuppiOLV = _vals[i0+3.*lNEvents];
+    double pWeight = 1;
+    if(!fCHS && fabs(_pfParticles[i0].eta()) < 2.5) pWeight = fReader     ->EvaluateMVA("BDT");
+    if(!fCHS && fabs(_pfParticles[i0].eta()) > 2.5) pWeight = fReaderNoVtx->EvaluateMVA("BDT");
+    if(!fCHS) { pWeight += 1; pWeight *=0.5; }
+    //if(fCHS) pWeight = 1;
+    if(_pfParticles[i0].user_index() == 2 ) pWeight = 1;  
+    if(_pfParticles[i0].user_index() == 3 ) pWeight = 0;
+    //if(fCHS && _pfParticles[i0].user_index() <  5 && fPt < 2.5) pWeight = 0; 
     if(pWeight < 0.1) continue;
-    pWeight = 1;
+    if(_pfParticles[i0].user_index()  < 2 && pWeight*fPt < 1.0) continue;
     PseudoJet curjet( pWeight*_pfParticles[i0].px(), pWeight*_pfParticles[i0].py(), pWeight*_pfParticles[i0].pz(), pWeight*_pfParticles[i0].e());
     curjet.set_user_index(_pfParticles[i0].user_index());
     particles.push_back(curjet);

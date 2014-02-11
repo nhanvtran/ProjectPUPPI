@@ -22,31 +22,31 @@ puppiCleanContainer::puppiCleanContainer(std::vector<fastjet::PseudoJet> inParti
   _chargedPV.resize(0); 
   _chargedNoPV.resize(0);
   _vals.resize(0); 
-  
-  for (unsigned int i = 0; i < inParticles.size(); i++){
+   for (unsigned int i = 0; i < inParticles.size(); i++){
     // fill vector of pseudojets
-    if (fabs(inParticles[i].pt())  < 0.2) continue;        
-    if (fabs(inParticles[i].eta()) > 5  ) continue;        
-    if (isPU[i] == 0) _genParticles.push_back( inParticles[i] );            
-    if(inParticles[i].user_index() < 2 && iDiscretize) continue; //just charged
+    if (fabs(inParticles[i].pt()) < 0.2) continue;        
+    if (fabs(inParticles[i].eta()) > 5)  continue;
+    if (_isPU[i] == 0) _genParticles.push_back( inParticles[i] );            
+    if (fabs(inParticles[i].user_index()) < 2 && iDiscretize)  continue;
     _pfParticles.push_back(inParticles[i]);
-    if ((isPU[i] == 0) || (isPU[i] == 1 && isCh[i] == 0 && fabs(inParticles[i].eta()) < 2.5) || (isPU[i] == 1 && fabs(inParticles[i].eta()) > 2.5)){
+    if (inParticles[i].user_index() != 3) { 
       _pfchsParticles.push_back( inParticles[i] );
     }
-    if ((isPU[i] == 0) && isCh[i] == 1 && fabs(inParticles[i].eta()) < 12.5){
+    if (inParticles[i].user_index() == 2) { 
       _chargedPV.push_back( inParticles[i] );
     }
-    if ((isPU[i] == 1) && isCh[i] == 1  && fabs(inParticles[i].eta()) < 12.5){
+    if (inParticles[i].user_index() == 3) { 
       _chargedNoPV.push_back( inParticles[i] );
     }
   }
-  if(iDiscretize) discretize(_pfParticles,inParticles);
+  if(iDiscretize) discretize(_pfParticles   ,inParticles);
+  if(iDiscretize) discretize(_pfchsParticles,inParticles,true);
 }
-void puppiCleanContainer::discretize(std::vector<fastjet::PseudoJet> &discreteParticles,std::vector<fastjet::PseudoJet> &iParticles) {
+void puppiCleanContainer::discretize(std::vector<fastjet::PseudoJet> &discreteParticles,std::vector<fastjet::PseudoJet> &iParticles,bool iPtCut) {
   bool lGrid = false;
   //Discretize in 0.1x0.1
-  TH2F* h2d      = new TH2F( "h2d"     ,";#eta;#phi;e (GeV)",2000, -5,5, 1250,0,2*TMath::Pi() ); //100 63
-  TH2F* h2dPU    = new TH2F( "h2dPU"   ,";#eta;#phi;e (GeV)",2000, -5,5, 1250,0,2*TMath::Pi() ); //100 63
+  TH2F* h2d      = new TH2F( "h2d"     ,";#eta;#phi;e (GeV)",100, -5,5, 63,0,2*TMath::Pi() ); //100 63
+  TH2F* h2dPU    = new TH2F( "h2dPU"   ,";#eta;#phi;e (GeV)",100, -5,5, 63,0,2*TMath::Pi() ); //100 63
   std::vector<PseudoJet> lJets; 
   std::vector<PseudoJet> lJetsPU; 
   for(int i0   = 0; i0 < h2d->GetNbinsX()+1; i0++) { 
@@ -58,9 +58,9 @@ void puppiCleanContainer::discretize(std::vector<fastjet::PseudoJet> &discretePa
     }
   }
   for (unsigned int i0 = 0; i0 < iParticles.size(); i0++){
-    int curBin = h2d->FindBin(iParticles[i0].eta(),iParticles[i0].phi());
     if (fabs(iParticles[i0].pt())  < 0.2) continue;        
-    if (fabs(iParticles[i0].eta()) > 5)   continue;        
+    if (fabs(iParticles[i0].eta()) > 5  ) continue;        
+    int curBin = h2d->FindBin(iParticles[i0].eta(),iParticles[i0].phi());
     if (lGrid  && iParticles[i0].user_index() == 0) h2d     ->SetBinContent( curBin, h2d     ->GetBinContent(curBin) + iParticles[i0].e() );        
     if (lGrid  && iParticles[i0].user_index() == 1) h2dPU   ->SetBinContent( curBin, h2dPU   ->GetBinContent(curBin) + iParticles[i0].e() );        
     if (!lGrid && iParticles[i0].user_index() == 0) lJets  [curBin] += iParticles[i0];
@@ -71,10 +71,12 @@ void puppiCleanContainer::discretize(std::vector<fastjet::PseudoJet> &discretePa
     for(unsigned int i0   = 0; i0 < lJets.size(); i0++) { 
       PseudoJet pJet;
       if(lJets  [i0].pt() > 0) pJet   += lJets  [i0]; 
-      //if(lJetsPU[i0].pt() > 0) pJet   += lJetsPU[i0];
+      if(lJetsPU[i0].pt() > 0) pJet   += lJetsPU[i0];
       pJet.set_user_index(0);
-      //if(lJets[i0].pt() < lJetsPU[i0].pt() ) pJet.set_user_index(1);
-      if(pJet.pt() > 0.2) discreteParticles.push_back(pJet);
+      if(lJets[i0].pt() < lJetsPU[i0].pt() ) pJet.set_user_index(1);
+      if(pJet.pt() < 0.2) continue; 
+      if(pJet.pt() < 1.0 && iPtCut) continue; 
+      discreteParticles.push_back(pJet);
     }
   }
   if(lGrid) { 
@@ -137,15 +139,15 @@ double puppiCleanContainer::goodVar(PseudoJet &iPart,std::vector<PseudoJet> &iPa
   if(iOpt == 6) lPup = lPup * iPart.pt()/pt_within_R(_pfParticles,iPart,Rsub);
   return lPup;
 }
-void puppiCleanContainer::getRMSAvg(int iOpt,std::vector<fastjet::PseudoJet> &iConstits,std::vector<fastjet::PseudoJet> &iParticles,std::vector<int> &iIsPU,double iQuant) { 
+void puppiCleanContainer::getRMSAvg(int iOpt,std::vector<fastjet::PseudoJet> &iConstits,std::vector<fastjet::PseudoJet> &iParticles,std::vector<int> &iIsPU,double iQuant,double iPtRMS) { 
   std::vector<double> lValsPV;
   std::vector<double> lValsPU;
   for(unsigned int i0 = 0; i0 < iConstits.size(); i0++ ) { 
     double pVal = goodVar(iConstits[i0],iParticles,iOpt);
     _vals.push_back(pVal);
-    if(iConstits[i0].pt() < 0.5) continue;
-    if(iConstits[i0].user_index() % 2 == 1) lValsPU.push_back(pVal);
-    if(iConstits[i0].user_index() % 2 == 0) lValsPV.push_back(pVal);
+    if(iConstits[i0].pt() < iPtRMS) continue;
+    if(iConstits[i0].user_index()  == 3) lValsPU.push_back(pVal);
+    if(iConstits[i0].user_index()  == 2) lValsPV.push_back(pVal);
   }
   std::sort (lValsPV.begin(),lValsPV.end());   
   std::sort (lValsPU.begin(),lValsPU.end());  
@@ -175,28 +177,32 @@ std::vector<fastjet::PseudoJet> puppiCleanContainer::puppiEvent     (int iOpt,do
   //Run through all compute mean and RMS
   _vals.resize(0);
   
-  //getRMSAvg(6,_pfParticles,_chargedPV,_isPU,iQuant);
-  getRMSAvg(7,_pfParticles,_pfParticles,_isPU,0.5);
+  getRMSAvg(7,_pfParticles,_chargedPV,_isPU,iQuant,0.5);
+  //getRMSAvg(6,_pfParticles,_pfParticles,_isPU,0.5);
   double lMed0=fMed; 
   double lRMS0=fRMS;  
-
   int lNEvents    = _vals.size();
-  //if(iOpt == 7) getRMSAvg(6,_pfParticles,_pfParticles,_isPU,0.5);
-  //double lMed1=fMed; 
-  //double lRMS1=fRMS;  
+  //if(iOpt == 7) getRMSAvg(6,_pfParticles,_pfParticles,_isPU,0.1,0.5);
+  
+  getRMSAvg(7,_pfParticles,_pfParticles,_isPU,0.5,0.2);
+  double lMed1=fMed; 
+  double lRMS1=fRMS;  
 
   //if(iOpt == 7) getRMSAvg(6,_pfParticles,_pfParticles,_isPU,iQuant);
   //double lMed2=fMed; 
   //double lRMS2=fRMS;  
 
   for(int i0 = 0; i0 < lNEvents; i0++) {
-    double pWeight = compute(0,_vals[i0]                    ,lMed0,lRMS0);
-    //if(iOpt == 7) pWeight += compute(0,_vals[i0+lNEvents]   ,lMed1,lRMS1);
-    //if(iOpt == 7) pWeight += compute(0,_vals[i0+lNEvents*2.],lMed2,lRMS2);
+    double pWeight = 1;
+    if(fabs(_pfParticles[i0].eta()) < 2.5) pWeight *= compute(0,_vals[i0]            ,lMed0,lRMS0);
+    if(fabs(_pfParticles[i0].eta()) > 2.5) pWeight *= compute(0,_vals[i0+lNEvents]   ,lMed1,lRMS1);
+    //if(iOpt == 7) pWeight *= compute(0,_vals[i0+lNEvents*2.],lMed2,lRMS2);
     //pWeight = ROOT::Math::chisquared_cdf(pWeight,2.);
-    if(pWeight*_pfParticles[i0].pt() < 1.0) continue;
+    if(_pfParticles[i0].user_index() == 2 ) pWeight = 1;  
+    if(_pfParticles[i0].user_index() == 3 ) pWeight = 0;
+    if(_pfParticles[i0].user_index()  < 2 && pWeight*_pfParticles[i0].pt() < 1.0) continue;
     if(pWeight < 0.1) continue;
-     PseudoJet curjet( pWeight*_pfParticles[i0].px(), pWeight*_pfParticles[i0].py(), pWeight*_pfParticles[i0].pz(), pWeight*_pfParticles[i0].e());
+    PseudoJet curjet( pWeight*_pfParticles[i0].px(), pWeight*_pfParticles[i0].py(), pWeight*_pfParticles[i0].pz(), pWeight*_pfParticles[i0].e());
     particles.push_back(curjet);
   }
   return particles;

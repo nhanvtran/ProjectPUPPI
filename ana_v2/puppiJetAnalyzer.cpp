@@ -80,7 +80,7 @@ float fTrClM  = 0;
 void readEvent( std::vector< fastjet::PseudoJet > &allParticles, std::vector<int> &v_isPU, std::vector<int> &v_isCh );
 void getJets(std::vector < fastjet::PseudoJet > &constits,std::vector < fastjet::PseudoJet > &jets);
 void getCleanJets(std::vector < fastjet::PseudoJet > &constits,std::vector < fastjet::PseudoJet > &jets);
-void analyzeEvent(TTree *iTree, std::vector < fastjet::PseudoJet > constits, std::vector < fastjet::PseudoJet > trimconstits, std::vector < fastjet::PseudoJet > genconstits);
+void analyzeEvent(TTree *iTree, std::vector < fastjet::PseudoJet > constits,std::vector < fastjet::PseudoJet > chsconstits, std::vector < fastjet::PseudoJet > trimconstits, std::vector < fastjet::PseudoJet > genconstits);
 void addBranches( TTree &iTree){
   iTree.Branch("pt" ,&fPt ,"fPt/F");
   iTree.Branch("eta",&fEta,"fEta/F");
@@ -88,11 +88,11 @@ void addBranches( TTree &iTree){
   iTree.Branch("m"  ,&fM  ,"fM/F");
   iTree.Branch("mtr",&fTrM,"fTrM/F");
 
-  iTree.Branch("corrpt" ,&fCPt ,"fCPt/F");
-  iTree.Branch("correta",&fCEta,"fCEta/F");
-  iTree.Branch("corrphi",&fCPhi,"fCPhi/F");
-  iTree.Branch("corrm"  ,&fCM  ,"fCM/F");
-  iTree.Branch("corrmtr",&fTrCM,"fTrCM/F");
+  iTree.Branch("chspt" ,&fCPt ,"fCPt/F");
+  iTree.Branch("chseta",&fCEta,"fCEta/F");
+  iTree.Branch("chsphi",&fCPhi,"fCPhi/F");
+  iTree.Branch("chsm"  ,&fCM  ,"fCM/F");
+  iTree.Branch("chsmtr",&fTrCM,"fTrCM/F");
 
   iTree.Branch("trimpt" ,&fTPt ,"fTPt/F");
   iTree.Branch("trimeta",&fTEta,"fTEta/F");
@@ -136,17 +136,17 @@ int main( int argc, char **argv ) {
     std::vector < int > v_isPU;
     std::vector < int > v_isCh;
     readEvent( allParticles, v_isPU, v_isCh );        
-    puppiTMVAContainer curEvent(allParticles, v_isPU, v_isCh); //TMVA
-   while(true){
+    //puppiTMVAContainer curEvent(allParticles, v_isPU, v_isCh); //TMVA
+    while(true){
       nEvts++;
       if (nEvts % 10 == 0) std::cout << "event no. = " << nEvts << std::endl;
       if (nEvts == maxEvents){ break; }
       if(fin.eof()) break;
       readEvent( allParticles, v_isPU, v_isCh );        
-      //puppiCleanContainer curEvent(allParticles, v_isPU, v_isCh);
-      curEvent.refresh(allParticles, v_isPU, v_isCh); //TMVA
+      puppiCleanContainer curEvent(allParticles, v_isPU, v_isCh);
+      //curEvent.refresh(allParticles, v_isPU, v_isCh); //TMVA
       std::vector<fastjet::PseudoJet> puppiParticles = curEvent.puppiEvent(7,0.5);
-      analyzeEvent(lTree,curEvent.pfParticles(),puppiParticles,curEvent.genParticles() );        
+      analyzeEvent(lTree,curEvent.pfParticles(),curEvent.pfchsParticles(),puppiParticles,curEvent.genParticles() );        
       allParticles.clear();
       v_isPU.clear();
       v_isCh.clear();
@@ -164,7 +164,8 @@ void readEvent( std::vector< fastjet::PseudoJet > &allParticles, std::vector<int
     // fill vector of pseudojets
     fastjet::PseudoJet curPseudoJet( px, py, pz, e );
     if (fabs(curPseudoJet.eta()) < 5){
-      int lId = 0; if(isPU) lId++; if(isCh) lId+=2;
+      int lId = 0; if(isPU) lId++; 
+      if(isCh && fabs(curPseudoJet.eta()) < 2.5) lId+=2;
       curPseudoJet.set_user_index(lId);
       allParticles.push_back( curPseudoJet );
       v_isPU.push_back(isPU);
@@ -236,16 +237,18 @@ void getCleanJets(std::vector < fastjet::PseudoJet > &constits,std::vector < fas
     }
   }   
 }
-void analyzeEvent(TTree *iTree, std::vector < fastjet::PseudoJet > constits, std::vector < fastjet::PseudoJet > trimconstits, std::vector < fastjet::PseudoJet > genconstits) { 
+void analyzeEvent(TTree *iTree, std::vector < fastjet::PseudoJet > constits,std::vector < fastjet::PseudoJet > chsconstits, std::vector < fastjet::PseudoJet > trimconstits, std::vector < fastjet::PseudoJet > genconstits) { 
   std::vector < fastjet::PseudoJet > jets;  
   std::vector < fastjet::PseudoJet > cleanjets;  
   std::vector < fastjet::PseudoJet > trimjets;  
   std::vector < fastjet::PseudoJet > genjets;  
+  std::vector < fastjet::PseudoJet > chsjets;  
   //Get All Jet Colelctions
   getJets(constits,jets);
   getCleanJets(constits,cleanjets);
   getJets(trimconstits,trimjets);
   getJets(genconstits,genjets);
+  getJets(chsconstits,chsjets);
   //Trimmer
   fastjet::Filter trimmer( fastjet::Filter(fastjet::JetDefinition(fastjet::kt_algorithm, 0.3), fastjet::SelectorPtFractionMin(0.05)));
   //Rho 
@@ -254,6 +257,8 @@ void analyzeEvent(TTree *iTree, std::vector < fastjet::PseudoJet > constits, std
   //Rho on the modified PF candiates
   GridMedianBackgroundEstimator lGridTrim(5.0,0.8);
   lGridTrim.set_particles(trimconstits);
+  GridMedianBackgroundEstimator lGridCHS(5.0,0.8);
+  lGridCHS.set_particles(chsconstits);
   for(unsigned int i0 = 0; i0 < jets.size(); i0++) { 
     fPt    = -20; fEta    = -20; fPhi    = -20; fM    = -20; fTrM    = -20;
     fCPt   = -20; fCEta   = -20; fCPhi   = -20; fCM   = -20; fTrCM   = -20; 
@@ -261,28 +266,41 @@ void analyzeEvent(TTree *iTree, std::vector < fastjet::PseudoJet > constits, std
     fTPt   = -20; fTEta   = -20; fTPhi   = -20; fTM   = -20; fTrTM   = -20;
     fTCPt  = -20; fTCEta  = -20; fTCPhi  = -20; fTCM  = -20; 
     fClPt  = -20; fClEta  = -20; fClPhi  = -20; fClM  = -20; fTrClM  = -20;
-    //Basics
-    fPt  = jets[i0].pt();
-    fEta = jets[i0].eta();
-    fPhi = jets[i0].phi();
-    fM   = jets[i0].m();
     fastjet::PseudoJet pTTrimmedJet = (trimmer)(jets[i0]);
-    fTrM = pTTrimmedJet.m();    
     //Corrected PF Jets
     PseudoJet pCorrJet = jets[i0];
     PseudoJet pArea    = jets[i0].area_4vector();
     //double    pTArea   = pTTrimmedJet.area();
     pCorrJet     -= lGrid.rho() * pArea;
-    //pTTrimmedJet -= lGrid.rho() * pArea;
-    fCPt  = pCorrJet.pt();
-    fCEta = pCorrJet.eta();
-    fCPhi = pCorrJet.phi();
-    fCM   = pCorrJet.m();
-    fTrCM = pTTrimmedJet.m();
+    fPt  = pCorrJet.pt();
+    fEta = pCorrJet.eta();
+    fPhi = pCorrJet.phi();
+    fM   = pCorrJet.m();
+    fTrM = pTTrimmedJet.m();
+    //Match to CHS Jets
     int iId = -1;
+    for(unsigned int i1 = 0; i1 < chsjets.size(); i1++) { 
+      if(chsjets[i1].pt() < 5) continue;
+      double pDR = jets[i0].delta_R(chsjets[i1]);
+      if(pDR > 0.4) continue;
+      iId = i1;
+      break;
+    }
+    if(iId > -1) { 
+      pCorrJet  = chsjets[iId];
+      pArea     = chsjets[iId].area_4vector();
+      pCorrJet -= lGridCHS.rho() * pArea;
+      pTTrimmedJet = (trimmer)(chsjets[iId]);
+      fCPt  = pCorrJet.pt();
+      fCEta = pCorrJet.eta();
+      fCPhi = pCorrJet.phi();
+      fCM   = pCorrJet.m();
+      fTrCM = pTTrimmedJet.m();
+    }
+    iId = -1;
     //Match to Gen Jets
     for(unsigned int i1 = 0; i1 < genjets.size(); i1++) { 
-      if(genjets[i0].pt() < 5) continue;
+      if(genjets[i1].pt() < 5) continue;
       double pDR = jets[i0].delta_R(genjets[i1]);
       if(pDR > 0.4) continue;
       iId = i1;
@@ -298,7 +316,7 @@ void analyzeEvent(TTree *iTree, std::vector < fastjet::PseudoJet > constits, std
     }
     iId = -1;
     for(unsigned int i1 = 0; i1 < trimjets.size(); i1++) { 
-      if(trimjets[i0].pt() < 5) continue;
+      if(trimjets[i1].pt() < 5) continue;
       double pDR = jets[i0].delta_R(trimjets[i1]);
       if(pDR > 0.4) continue;
       iId = i1;
@@ -311,7 +329,7 @@ void analyzeEvent(TTree *iTree, std::vector < fastjet::PseudoJet > constits, std
       fTM   = trimjets[iId].m();
       //Calculate rho again
       PseudoJet pTCorrJet = trimjets[iId];
-      PseudoJet pTArea    = trimjets[iId].area_4vector();
+      //PseudoJet pTArea    = trimjets[iId].area_4vector();
       pTCorrJet -= lGridTrim.rho() * pArea;
       fTCPt  = pTCorrJet.pt();
       fTCEta = pTCorrJet.eta();
@@ -322,7 +340,7 @@ void analyzeEvent(TTree *iTree, std::vector < fastjet::PseudoJet > constits, std
     }
     iId = -1;
     for(unsigned int i1 = 0; i1 < cleanjets.size(); i1++) { 
-      if(cleanjets[i0].pt() < 5) continue;
+      if(cleanjets[i1].pt() < 5) continue;
       double pDR = jets[i0].delta_R(cleanjets[i1]);
       if(pDR > 0.4) continue;
       iId = i1;

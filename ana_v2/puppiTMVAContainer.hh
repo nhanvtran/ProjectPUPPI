@@ -21,9 +21,9 @@ using namespace fastjet;
 class puppiTMVAContainer{
 public:
     // default ctor
-  puppiTMVAContainer(std::vector<PseudoJet> inParticles, std::vector<int> isPU, std::vector<int> isCh,std::string iWeight="TMVA/weights/TMVAClassificationCategory_PUDisc_v1.weights_wvtx.xml",bool iVtx=true,bool iDiscretize=true); 
+  puppiTMVAContainer(std::vector<PseudoJet> inParticles, std::vector<int> isPU, std::vector<int> isCh,std::string iWeight="TMVA/weights/TMVAClassificationCategory_PUDisc_wvtx_x1010.weights.xml",bool iVtx=true,bool iDiscretize=true,bool iCHS=false); 
     ~puppiTMVAContainer(); 
-    void discretize(std::vector<fastjet::PseudoJet> &discreteParticles,std::vector<fastjet::PseudoJet> &iParticles);
+  void discretize(std::vector<fastjet::PseudoJet> &discreteParticles,std::vector<fastjet::PseudoJet> &iParticles,bool iPtCut=false);
     std::vector<fastjet::PseudoJet> genParticles(){ return _genParticles; }
     std::vector<fastjet::PseudoJet> pfParticles(){ return _pfParticles; }    
     std::vector<fastjet::PseudoJet> pvParticles(){ return _chargedPV; }        
@@ -37,7 +37,7 @@ protected:
         
     //Helper Functions
     double  goodVar  (fastjet::PseudoJet &iPart,std::vector<fastjet::PseudoJet> &iParts, int iOpt);    
-    void    getRMSAvg(int iOpt,std::vector<fastjet::PseudoJet> &iConstits,std::vector<fastjet::PseudoJet> &iParticles,std::vector<int> &iIsPU,double iQuant);
+  void    getRMSAvg(int iOpt,std::vector<fastjet::PseudoJet> &iConstits,std::vector<fastjet::PseudoJet> &iParticles,std::vector<int> &iIsPU,double iQuant);
     double  compute  (int iOpt,double iVal,double iMed,double iRMS);
   std::vector<PseudoJet> _pfParticles;
     std::vector<PseudoJet> _pfchsParticles;    
@@ -49,9 +49,11 @@ protected:
     std::vector<int> _isCh;    
     double fMed;
     double fRMS;
+    bool  fCHS;
     bool  fVtx;
     bool  fDiscretize;
     TMVA::Reader *fReader;
+    TMVA::Reader *fReaderNoVtx;
     float fPt; 
     float fPuppi;
     float fPuppiO;

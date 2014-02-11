@@ -92,12 +92,12 @@ int main( int argc, char **argv ) {
       if (nEvts == maxEvents){ break; }
       if(fin.eof()) break;
       readEvent( allParticles, v_isPU, v_isCh );        
-      puppiCleanContainer curCleanEvent(allParticles, v_isPU, v_isCh);
+      //puppiCleanContainer curCleanEvent(allParticles, v_isPU, v_isCh);
       curEvent.refresh(allParticles, v_isPU, v_isCh); //TMVA
       std::vector<fastjet::PseudoJet> pfParticles    = curEvent.pfParticles();
       std::vector<fastjet::PseudoJet> genParticles   = curEvent.genParticles();
       std::vector<fastjet::PseudoJet> puppiParticles = curEvent.puppiEvent(7,0.5);
-      std::vector<fastjet::PseudoJet> trimParticles  = curCleanEvent.trimEvent();
+      std::vector<fastjet::PseudoJet> trimParticles;//  = curCleanEvent.trimEvent();
       analyzeEvent(pfParticles,trimParticles,genParticles,puppiParticles );        
       lTree->Fill();
       allParticles.clear();
