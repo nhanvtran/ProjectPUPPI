@@ -11,9 +11,11 @@ using namespace fastjet;
 class puppiContainer{
 public:
     // default ctor
-  puppiContainer(std::vector<PseudoJet> inParticles, std::vector<int> isPU, std::vector<int> isCh,bool iDiscretize=true); 
+    puppiContainer(std::vector<PseudoJet> inParticles, std::vector<int> isPU, std::vector<int> isCh,bool iDiscretize=true); 
     ~puppiContainer(); 
-    void discretize(std::vector<fastjet::PseudoJet> &discreteParticles,std::vector<fastjet::PseudoJet> &iParticles);
+    
+    //void discretize(std::vector<fastjet::PseudoJet> &discreteParticles,std::vector<fastjet::PseudoJet> &iParticles);
+    
     std::vector<fastjet::PseudoJet> genParticles(){ return _genParticles; }
     std::vector<fastjet::PseudoJet> pfParticles(){ return _pfParticles; }    
     std::vector<fastjet::PseudoJet> pfchsParticles(){ return _pfchsParticlesToUse; }  

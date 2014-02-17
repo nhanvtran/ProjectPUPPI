@@ -11,7 +11,7 @@ using namespace fastjet;
 //FASTJET_BEGIN_NAMESPACE      // defined in fastjet/internal/base.hh
 
 
-puppiContainer::puppiContainer(std::vector<fastjet::PseudoJet> inParticles, std::vector<int> isPU, std::vector<int> isCh){
+puppiContainer::puppiContainer(std::vector<fastjet::PseudoJet> inParticles, std::vector<int> isPU, std::vector<int> isCh, bool iDiscretize){
     
     //_pfParticles = inParticles;
     _isPU = isPU;
@@ -95,7 +95,7 @@ puppiContainer::puppiContainer(std::vector<fastjet::PseudoJet> inParticles, std:
     cleansedWeights.resize(0);    
     
     // discretize neutrals? 
-    bool bDiscretize = true;
+    bool bDiscretize = iDiscretize;
     std::vector< fastjet::PseudoJet > neutralParts_discrete;
         
     if (bDiscretize){
