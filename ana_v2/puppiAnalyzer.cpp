@@ -231,7 +231,7 @@ int main( int argc, char **argv ) {
             //
             
             
-            if (nEvts < 25 and nEvts > 0){
+            if (nEvts < 50 and nEvts > 0){
                                                 
                 std::vector<float> puppiWeights_pfchs = curEvent.getPuppiWeights_pfchs();
                 std::vector<float> puppiWeights_chLV = curEvent.getPuppiWeights_chLV();                
