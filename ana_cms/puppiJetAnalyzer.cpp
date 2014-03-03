@@ -32,6 +32,7 @@
 #include "fastjet/JetDefinition.hh"
 #include <fastjet/contrib/JetCleanser.hh>
 
+#include "puppiCleanContainer.hh"
 #include "puppiTMVAContainer.hh"
 #include "NoTrees.hh"
 
@@ -167,10 +168,10 @@ int main( int argc, char **argv ) {
   std::vector < float > v_Vtx;
   std::vector < int >   v_VId;
   
-  puppiTMVAContainer curEvent(allParticles, v_isPU, v_isCh,v_Tk,v_Vtx,v_VId); //TMVA
+  //puppiTMVAContainer curEvent(allParticles, v_isPU, v_isCh,v_Tk,v_Vtx,v_VId); //TMVA
   readCMSEvent   (fTree,    allParticles, v_isPU, v_isCh,v_Tk,v_Vtx,v_VId);        
   readGenCMSEvent(fGenTree, genParticles);
-  curEvent.refresh(allParticles, v_isPU, v_isCh,v_Tk,v_Vtx,v_VId); //TMVA
+  //curEvent.refresh(allParticles, v_isPU, v_isCh,v_Tk,v_Vtx,v_VId); //TMVA
   genParticles.clear();
   allParticles.clear();
   while(true){
@@ -180,8 +181,8 @@ int main( int argc, char **argv ) {
     if(fin.eof()) break;
     readCMSEvent(fTree, allParticles, v_isPU, v_isCh,v_Tk,v_Vtx,v_VId);        
     readGenCMSEvent(fGenTree, genParticles);
-    //puppiCleanContainer curEvent(allParticles, v_isPU, v_isCh);
-    curEvent.refresh(allParticles, v_isPU, v_isCh,v_Tk,v_Vtx,v_VId); //TMVA
+    puppiCleanContainer curEvent(allParticles, v_isPU, v_isCh);
+    //curEvent.refresh(allParticles, v_isPU, v_isCh,v_Tk,v_Vtx,v_VId); //TMVA
     std::vector<fastjet::PseudoJet> puppiParticles = curEvent.puppiEvent(7,0.5);
     analyzeEvent(lTree,curEvent.pfParticles(),curEvent.pfchsParticles(),puppiParticles,genParticles,curEvent.genParticles());        
     genParticles.clear();
@@ -215,13 +216,14 @@ void setupGenCMSReadOut(TTree *iTree ) {
 }
 void readCMSEvent(TTree *iTree, std::vector< fastjet::PseudoJet > &allParticles, std::vector<int> &v_isPU, std::vector<int> &v_isCh,
 		  std::vector<float> &v_pTk,std::vector<float> &v_pVtx,std::vector<int> &v_pVId ){
-  float px, py, pz, e, pdgid, isCh, isPU = 0;
+  float px, py, pz, e, pdgid, isCh, isPU, isPUGen = 0;
   while(true){
     iTree->GetEntry(fCount);
     fCount++;
     if(fPartPt == -1) break;
     isCh = (fVtxId != -1);
-    isPU = (fGXPt/fPartPt < 0.3);
+    isPUGen = (fGXPt/fPartPt < 0.3);
+    isPU = (fVtxId > 0);
     TLorentzVector pVec; pVec.SetPtEtaPhiM(fPartPt,fPartEta,fPartPhi,fPartM);
     px = pVec.Px();
     py = pVec.Py();
@@ -232,6 +234,7 @@ void readCMSEvent(TTree *iTree, std::vector< fastjet::PseudoJet > &allParticles,
     fastjet::PseudoJet curPseudoJet( px, py, pz, e );
     if (fabs(curPseudoJet.eta()) < 5){
       int lId = 0; if(isPU) lId++; if(isCh) lId+=2;
+      if(isPUGen) lId += 4;
       curPseudoJet.set_user_index(lId);
       allParticles.push_back( curPseudoJet );
       v_isPU.push_back(isPU);
