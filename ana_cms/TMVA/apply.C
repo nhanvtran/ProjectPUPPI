@@ -21,62 +21,36 @@
 #include "TMVA/Tools.h"
 #endif
 
-void apply(std::string iName="train/OutputTmp.root") { 
+void apply(std::string iName="../RecoOutput_vLoose.root") { //train/OutputTmp.root") { 
   TMVA::Tools::Instance();
-  TMVA::Reader *reader = new TMVA::Reader( "!Color:!Silent" );    
-
-  float lPt        = 0; reader->AddVariable("pt"                 , &lPt);
-  //float lEta       = 0; reader->AddVariable("eta"                , &lEta);
-  //float lDR        = 0; reader->AddVariable("dR"                 , &lDR);
-  //float lPtc       = 0; reader->AddVariable("ptc"                , &lPtc);
-  // float lPtdR      = 0; reader->AddVariable("ptdR"               , &lPtdR);
-  //float lPuppi     = 0; reader->AddVariable("puppi"              , &lPuppi);
-  float lPtODR     = 0; reader->AddVariable("ptodR"              , &lPtODR);
-  //float lPtODRS    = 0; reader->AddVariable("ptodRS"             , &lPtODRS);
-  float lPtODRSO   = 0; reader->AddVariable("ptodRSO"            , &lPtODRSO);
-  //float lDRLV      = 0; reader->AddVariable("dR_lv"              , &lDRLV);
-  //float lPtcLV     = 0; reader->AddVariable("ptc_lv"             , &lPtcLV);
-  //float lPtdRLV    = 0; reader->AddVariable("ptdR_lv"            , &lPtdRLV);
-  //float lPuppiLV   = 0; reader->AddVariable("puppi_lv"           , &lPuppiLV);
-  float lPtODRLV   = 0; reader->AddVariable("ptodR_lv"           , &lPtODRLV);
-  //float lPtODRSLV  = 0; reader->AddVariable("ptodRS_lv"          , &lPtODRSLV);
-  float lPtODRSOLV = 0; reader->AddVariable("ptodRSO_lv"         , &lPtODRSOLV);
-  //float lDRPU      = 0; reader->AddVariable("dR_pu"              , &lDRPU);
-  //float lPtcPU     = 0; reader->AddVariable("pt_pu"              , &lPtcPU);
-  //float lPtdRPU    = 0; reader->AddVariable("ptdR_pu"            , &lPtdRPU);
-  //float lPuppiPU   = 0; reader->AddVariable("puppi_pu"           , &lPuppiPU);
-  //float lPtODRPU   = 0; reader->AddVariable("ptodR_pu"           , &lPtODRPU);
-  //float lPtODRSPU  = 0; reader->AddVariable("ptodRS_pu"          , &lPtODRSPU);
-  //float lPtODRSOPU = 0; reader->AddVariable("ptodRSO_pu"         , &lPtODRSOPU);
+  TMVA::Reader *reader  = new TMVA::Reader( "!Color:!Silent" );    
+  TMVA::Reader *reader2 = new TMVA::Reader( "!Color:!Silent" );    
+ 
+  float lTK        = 0; reader->AddVariable("trk"                , &lTK);
+  float lVtx       = 0; reader->AddVariable("vtx"                , &lVtx);
+  float lVId       = 0; reader->AddVariable("vtxid"              , &lVId);
+  float lD0        = 0; reader->AddVariable("d0"                 , &lD0);
+  float lDZ        = 0; reader->AddVariable("dZ"                 , &lDZ);
+  float lDepth     = 0; reader->AddVariable("depth"              , &lDepth);
+  float lTime      = 0; reader->AddVariable("time"               , &lTime);
+  reader2->AddVariable("depth"              , &lDepth);
+  reader2->AddVariable("time"               , &lTime);
   
   std::string lJetName = "BDT";
-  reader->BookMVA(lJetName .c_str(),(std::string("weights/TMVAClassificationCategory_PUDisc_v1")+std::string(".weights.xml")).c_str());
+  reader ->BookMVA("type1",(std::string("weights/TMVAClassificationCategory_PUDisc_exp_pftype1")+std::string(".weights.xml")).c_str());
+  reader2->BookMVA("type4",(std::string("weights/TMVAClassificationCategory_PUDisc_exp_pftype4")+std::string(".weights.xml")).c_str());
+  reader2->BookMVA("type5",(std::string("weights/TMVAClassificationCategory_PUDisc_exp_pftype5")+std::string(".weights.xml")).c_str());
   
   TFile *lFile = new TFile(iName.c_str());
-  TTree *lTree = (TTree*) lFile->Get("tree");
-   lTree->SetBranchAddress("pt"                 , &lPt);
-  //lTree->SetBranchAddress("eta"                , &lEta);
-   //lTree->SetBranchAddress("dR"                 , &lDR);
-   //lTree->SetBranchAddress("ptc"                , &lPtc);
-   //lTree->SetBranchAddress("ptdR"               , &lPtdR);
-  //lTree->SetBranchAddress("puppi"              , &lPuppi);
-  lTree->SetBranchAddress("ptodR"              , &lPtODR);
-  //lTree->SetBranchAddress("ptodRS"             , &lPtODRS);
-  lTree->SetBranchAddress("ptodRSO"            , &lPtODRSO);
-  //lTree->SetBranchAddress("dR_lv"              , &lDRLV);
-  // lTree->SetBranchAddress("ptc_lv"             , &lPtcLV);
-  //lTree->SetBranchAddress("ptdR_lv"            , &lPtdRLV);
-  //lTree->SetBranchAddress("puppi_lv"           , &lPuppiLV);
-  lTree->SetBranchAddress("ptodR_lv"           , &lPtODRLV);
-  //lTree->SetBranchAddress("ptodRS_lv"          , &lPtODRSLV);
-  lTree->SetBranchAddress("ptodRSO_lv"         , &lPtODRSOLV);
-  //lTree->SetBranchAddress("dR_pu"              , &lDRPU);
-  //lTree->SetBranchAddress("pt_pu"              , &lPtcPU);
-  //lTree->SetBranchAddress("ptdR_pu"            , &lPtdRPU);
-  //lTree->SetBranchAddress("puppi_pu"           , &lPuppiPU);
-  //lTree->SetBranchAddress("ptodR_pu"           , &lPtODRPU);
-  //lTree->SetBranchAddress("ptodRS_pu"          , &lPtODRSPU);
-  //lTree->SetBranchAddress("ptodRSO_pu"         , &lPtODRSOPU);
+  TTree *lTree = (TTree*) lFile->Get("Result");
+  lTree->SetBranchAddress("trk"                , &lTK);
+  lTree->SetBranchAddress("vtx"                , &lVtx);
+  int lIVId = 0; lTree->SetBranchAddress("vtxid"               , &lIVId);
+  lTree->SetBranchAddress("d0"                , &lD0);
+  lTree->SetBranchAddress("dZ"                , &lDZ);
+  lTree->SetBranchAddress("depth"             , &lDepth);
+  lTree->SetBranchAddress("time"              , &lTime);
+  int lPFType = 0; lTree->SetBranchAddress("pftype"            , &lPFType);
     
   int lNEvents = lTree->GetEntries();
   TFile *lOFile = new TFile("Output.root","RECREATE");
@@ -85,7 +59,11 @@ void apply(std::string iName="train/OutputTmp.root") {
   for (Long64_t i0=0; i0<lNEvents;i0++) {
     if (i0 % 10000 == 0) std::cout << "--- ... Processing event: " << double(i0)/double(lNEvents) << std::endl;
     lTree->GetEntry(i0);
-    lMVA      = float(reader->EvaluateMVA(lJetName.c_str()));
+    lVId = float(lIVId);
+    lMVA = 1;
+    if(lPFType == 1 || lPFType == 2 || lPFType == 3) lMVA      = float(reader->EvaluateMVA("type1"));
+    if(lPFType == 4) lMVA      = float(reader2->EvaluateMVA("type4"));
+    if(lPFType == 5) lMVA      = float(reader2->EvaluateMVA("type5"));
     lOTree->Fill();
   }
   lOTree->Write();

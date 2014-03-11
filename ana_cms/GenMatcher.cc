@@ -36,6 +36,11 @@ void GenMatcher::setup(TTree *iTree) {
   fTree->Branch("trk"   ,&fTrk   ,"fTrk/F");
   fTree->Branch("vtx"   ,&fVtx   ,"fVtx/F");
   fTree->Branch("vtxid" ,&fVtxId ,"fVtxId/I");
+  fTree->Branch("time"  ,&fTime  ,"fTime/F");
+  fTree->Branch("depth" ,&fDepth ,"fDepth/F");
+  fTree->Branch("pftype",&fPFType,"fPFType/I");
+  fTree->Branch("d0"    ,&fD0    ,"fD0/F");
+  fTree->Branch("dZ"    ,&fDZ    ,"fDZ/F");
 }
 bool GenMatcher::load(int iEvent) { 
   fPFPart   ->Clear();
@@ -49,7 +54,7 @@ float GenMatcher::matchDilution(int iId,float iPt, float iEta,float iPhi) {
     if(i0 == iId) continue;
     TPFPart *pPart = (TPFPart*)((*fPFPart)[i0]);
     double pDR = deltaR(iEta,iPhi,pPart->eta,pPart->phi);
-    if(pDR > 0.05) continue;
+    if(pDR > 0.05+0.08*(fabs(iEta) > 2.5)) continue;
     lPtTot += pPart->pt;
   }
   return iPt/lPtTot;
@@ -63,7 +68,7 @@ TLorentzVector GenMatcher::matchGen(float iEta,float iPhi,float iDilution) {
        fabs(lPart->pdgId) == 14 || 
        fabs(lPart->pdgId) == 16) continue;
     double pDR = deltaR(iEta,iPhi,lPart->eta,lPart->phi);
-    if(pDR > 0.05) continue;
+    if(pDR > 0.05 + 0.08*(fabs(iEta) > 2.5)) continue;
     TLorentzVector pVec; pVec.SetPtEtaPhiM(lPart->pt*iDilution,lPart->eta,lPart->phi,lPart->mass*iDilution); //Dilute particle by energy
     lVec += pVec;
   }
@@ -110,6 +115,11 @@ void GenMatcher::fillVars(TLorentzVector iMatch,TPFPart *iPart) {
   fTrk    = iPart->trkChi2;
   fVtx    = iPart->vtxChi2;
   fVtxId  = iPart->vtxId;
+  fDepth  = iPart->depth;
+  fTime   = iPart->time;
+  fPFType = iPart->pfType;
+  fD0     = iPart->d0;
+  fDZ     = iPart->dz;
   fTree->Fill();
 }
 double GenMatcher::deltaR(float iEta0,float iPhi0,float iEta1,float iPhi1) { 
@@ -131,4 +141,9 @@ void GenMatcher::reset() {
   fTrk    = -1;
   fVtx    = -1;
   fVtxId  = -1;
+  fTime   = -1;
+  fDepth  = -1;
+  fPFType = -1;
+  fD0     = -1;
+  fDZ     = -1; 
 }

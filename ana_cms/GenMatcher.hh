@@ -36,5 +36,10 @@ protected:
   float fMRec;
   float fTrk;
   float fVtx;
+  float fDepth;
+  float fTime;
+  float fD0;
+  float fDZ;
+  int   fPFType;
   int   fVtxId;
 };

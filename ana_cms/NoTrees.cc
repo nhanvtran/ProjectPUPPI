@@ -261,6 +261,7 @@ double var_within_R(int iId, const vector<PseudoJet> & particles, const PseudoJe
     if(iId == 7) var += log(near_particles[i].pt()/pDR);
     if(iId == 8) var += log(near_particles[i].pt()/pDR)*log(near_particles[i].pt()/pDR);
     if(iId == 9) var += near_particles[i].pt()/pDR;
+    if(iId == 10) var += near_particles[i].pt();
   }
   return var;
 }
