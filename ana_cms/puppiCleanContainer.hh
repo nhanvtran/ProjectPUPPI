@@ -1,4 +1,5 @@
 #include "NoTrees.hh"
+#include "RecoObj.hh"
 #include "fastjet/internal/base.hh"
 #include "fastjet/PseudoJet.hh"
 
@@ -11,33 +12,33 @@ using namespace fastjet;
 class puppiCleanContainer{
 public:
     // default ctor
-    puppiCleanContainer(std::vector<PseudoJet> inParticles, std::vector<int> isPU, std::vector<int> isCh,bool iDiscretize=false); 
+  puppiCleanContainer(std::vector<RecoObj> inParticles, bool iExperiment=true,bool iTuned=true);
     ~puppiCleanContainer(); 
-    void discretize(std::vector<fastjet::PseudoJet> &discreteParticles,std::vector<fastjet::PseudoJet> &iParticles,bool iPtCut=false);
     std::vector<fastjet::PseudoJet> genParticles(){ return _genParticles; }
     std::vector<fastjet::PseudoJet> pfParticles(){ return _pfParticles; }    
     std::vector<fastjet::PseudoJet> pvParticles(){ return _chargedPV; }        
     std::vector<fastjet::PseudoJet> puParticles(){ return _chargedNoPV; }    
     std::vector<fastjet::PseudoJet> pfchsParticles(){ return _pfchsParticles; }    
-  std::vector<fastjet::PseudoJet> puppiEvent     (int iOpt,double iQuant);
-    std::vector<fastjet::PseudoJet> trimEvent();
+    std::vector<fastjet::PseudoJet> puppiEvent     (int iOpt,double iQuant);
 
 protected:
         
   //Helper Functions
     double  goodVar  (fastjet::PseudoJet &iPart,std::vector<fastjet::PseudoJet> &iParts, int iOpt);    
-  void   getRMSAvg(int iOpt,std::vector<fastjet::PseudoJet> &iConstits,std::vector<fastjet::PseudoJet> &iParticles,std::vector<int> &iIsPU,double iQuant,double iPtRMS);
-    double  compute  (int iOpt,double iVal,double iMed,double iRMS);
+    void    getRMSAvg(int iOpt,std::vector<fastjet::PseudoJet> &iConstits,std::vector<fastjet::PseudoJet> &iParticles,double iQuant,double iPtRMS,bool isForward);
+    double  compute  (int iOpt,double iVal,double iMed,double iRMS,double iChi2Exp);
+    std::vector<RecoObj> _recoParticles;
     std::vector<PseudoJet> _pfParticles;
     std::vector<PseudoJet> _pfchsParticles;    
     std::vector<PseudoJet> _genParticles;
     std::vector<PseudoJet> _chargedPV;
     std::vector<PseudoJet> _chargedNoPV;
     std::vector<double> _vals;
-    std::vector<int> _isPU;
-    std::vector<int> _isCh;    
     double fMed;
     double fRMS;
+    double fMin;
+    bool _isTuned;
+    bool _isExperiment;
 };
 
 //FASTJET_END_NAMESPACE

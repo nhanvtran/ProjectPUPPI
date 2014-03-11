@@ -35,7 +35,7 @@
 #include "puppiCleanContainer.hh"
 #include "puppiTMVAContainer.hh"
 #include "NoTrees.hh"
-
+#include "RecoObj.hh"
 
 using namespace std;
 using namespace fastjet;
@@ -47,14 +47,24 @@ ifstream fin;
 /////////////////////////////////////////////////////////////////////
 int   fCount      = 0;
 int   fGCount     = 0;
+
+float fPartProb   = 0;
+float fPartChi2   = 0; 
+float fPartChi2PU = 0;
 float fPartPt     = 0; 
 float fPartEta    = 0; 
 float fPartPhi    = 0; 
 float fPartM      = 0;
-float fGXPt       = 0;
+int   fPartPFType = 0; 
+float fPartDepth  = 0; 
+float fPartTime   = 0; 
+float fPartDZ     = 0; 
+float fPartD0     = 0; 
+
+int   fVtxId      = 0; 
 float fPartTk     = 0; 
 float fPartVtx    = 0; 
-int   fVtxId      = 0; 
+float fGXPt       = 0;
 float fGPt        = 0; 
 float fGEta       = 0; 
 float fGPhi       = 0; 
@@ -89,21 +99,38 @@ float fClEta  = 0;
 float fClPhi  = 0; 
 float fClM    = 0; 
 float fTrClM  = 0;
+float fRho    = 0; 
+
+float fMet      = 0;
+float fMetPhi   = 0;
+float fSumet    = 0;
+float fGMet      = 0;
+float fGMetPhi   = 0;
+float fGSumet    = 0;
+float fTMet      = 0;
+float fTMetPhi   = 0;
+float fTSumet    = 0;
+float fPMet      = 0;
+float fPMetPhi   = 0;
+float fPSumet    = 0;
 /////////////////////////////////////////////////////////////////////
 // Helper functions
 /////////////////////////////////////////////////////////////////////
-void setupCMSReadOut   (TTree *iTree );
+void plotEvent( std::vector < fastjet::PseudoJet > constits, std::string name, std::vector < fastjet::PseudoJet > jets );
+void setupCMSReadOut(TTree *iTree );
 void setupGenCMSReadOut(TTree *iTree );
-void readGenCMSEvent   (TTree *iTree, std::vector< fastjet::PseudoJet > &allParticles );
-void readCMSEvent      (TTree *iTree, std::vector< fastjet::PseudoJet > &allParticles, 
-			std::vector<int> &v_isPU, std::vector<int> &v_isCh,std::vector<float> &v_pTk,std::vector<float> &v_pVtx,std::vector<int> &v_VId );
-void readEvent( std::vector< fastjet::PseudoJet > &allParticles, std::vector<int> &v_isPU, std::vector<int> &v_isCh );
-double deltaR(PseudoJet &iJet0,PseudoJet &iJet1);
+void readGenCMSEvent(TTree *iTree, std::vector< fastjet::PseudoJet > &allParticles );
+void readCMSEvent   (TTree *iTree, std::vector< RecoObj >            &allParticles );
 void getJets(std::vector < fastjet::PseudoJet > &constits,std::vector < fastjet::PseudoJet > &jets);
 void getCleanJets(std::vector < fastjet::PseudoJet > &constits,std::vector < fastjet::PseudoJet > &jets);
+double deltaR(PseudoJet &iJet0,PseudoJet &iJet1);
+float *met( std::vector< fastjet::PseudoJet > &iParticles);
+void analyzeMETEvent(std::vector < fastjet::PseudoJet > constits, std::vector < fastjet::PseudoJet > trimconstits, std::vector < fastjet::PseudoJet > genconstits,std::vector < fastjet::PseudoJet > puppiconstits);
+void setTDRStyle();
 void analyzeEvent(TTree *iTree, std::vector < fastjet::PseudoJet > constits,std::vector < fastjet::PseudoJet > chsconstits, std::vector < fastjet::PseudoJet > trimconstits, 
 		  std::vector < fastjet::PseudoJet > genconstits, std::vector < fastjet::PseudoJet > gen2constits);
 void addBranches( TTree &iTree){
+  iTree.Branch("rho",&fRho,"fRho/F");
   iTree.Branch("pt" ,&fPt ,"fPt/F");
   iTree.Branch("eta",&fEta,"fEta/F");
   iTree.Branch("phi",&fPhi,"fPhi/F");
@@ -133,22 +160,47 @@ void addBranches( TTree &iTree){
   iTree.Branch("genm"  ,&fGenM  ,"fGenM/F");
   iTree.Branch("genmtr",&fTrGenM ,"fTrGenM/F");
 
-  iTree.Branch("cleanpt" ,&fClPt  ,"fClPt/F");
-  iTree.Branch("cleaneta",&fClEta ,"fClEta/F");
-  iTree.Branch("cleanphi",&fClPhi ,"fClPhi/F");
-  iTree.Branch("cleanm"  ,&fClM   ,"fClM/F");
-  iTree.Branch("cleanmtr",&fTrClM ,"fTrClM/F");
+  iTree.Branch("genmatchpt" ,&fClPt  ,"fClPt/F");
+  iTree.Branch("genmatcheta",&fClEta ,"fClEta/F");
+  iTree.Branch("genmatchphi",&fClPhi ,"fClPhi/F");
+  iTree.Branch("genmatchm"  ,&fClM   ,"fClM/F");
+  iTree.Branch("genmatchmtr",&fTrClM ,"fTrClM/F");
+}
+void addMETBranches( TTree &iTree){
+  iTree.Branch("rho"      ,&fRho     ,"fRho/F");
+  iTree.Branch("genmet"   ,&fGMet    ,"fGMet/F");
+  iTree.Branch("genmetphi",&fGMetPhi ,"fGMetPhi/F");
+  iTree.Branch("gensumet" ,&fGSumet  ,"fGSumet/F");
+  iTree.Branch("met"      ,&fMet     ,"fMet/F");
+  iTree.Branch("metphi"   ,&fMetPhi  ,"fMetPhi/F");
+  iTree.Branch("sumet"    ,&fSumet   ,"fSumet/F");
+  iTree.Branch("cleanmet"  ,&fTMet    ,"fTMet/F");
+  iTree.Branch("cleanmetphi",&fTMetPhi,"fTMetPhi/F");
+  iTree.Branch("cleansumet" ,&fTSumet ,"fTSumet/F");
+  iTree.Branch("puppimet"   ,&fPMet    ,"fMet/F");
+  iTree.Branch("puppimetphi",&fPMetPhi ,"fMetPhi/F");
+  iTree.Branch("puppisumet" ,&fPSumet  ,"fSumet/F");
+}
+bool findMuon(std::vector < RecoObj > allParticles ) { 
+  for(int i0 = 0; i0 < allParticles.size(); i0++) { 
+    if(allParticles[i0].pfType != 3) continue;
+    if(allParticles[i0].pt     > 20) return true;
+  }
+  return false;
 }
 //void puppiJetAnalyzer(
 int main( int argc, char **argv ) {
-  std::string iName="/Users/Phil//PUPPI/samples/Zj_80.dat";//) {
+  setTDRStyle();
+
   gROOT->ProcessLine("#include <vector>");                
   int nEvts = 0;
   
-  int maxEvents = atoi(argv[1]);
+  int maxEvents  = atoi(argv[1]);
+  char *recoFile = argv[2];;
+  char *genFile  = argv[3];
+  int useMVA     = atoi(argv[4]);
   
-  std::cout << "Processing " << iName << std::endl;
-  TFile* lReadout = new TFile("RecoOutput.root");
+  TFile* lReadout = new TFile(recoFile);
   TTree* fTree    = (TTree*) lReadout->FindObjectAny("Result");
   setupCMSReadOut(fTree);
   
@@ -158,54 +210,98 @@ int main( int argc, char **argv ) {
   
   TFile* lFile = new TFile("output/OutputTmp.root", "RECREATE");
   TTree* lTree      = new TTree("tree", "tree");
+  TTree* lMetTree   = new TTree("met", "met");
   addBranches(*lTree);
-  
-  std::vector < fastjet::PseudoJet > allParticles;
+  addMETBranches(*lMetTree);
+
+  std::vector < RecoObj > allParticles;
   std::vector < fastjet::PseudoJet > genParticles;
-  std::vector < int > v_isPU;
-  std::vector < int > v_isCh;
-  std::vector < float > v_Tk;
-  std::vector < float > v_Vtx;
-  std::vector < int >   v_VId;
+  std::vector < fastjet::PseudoJet > pfParticles;
+  std::vector < fastjet::PseudoJet > chsParticles;
+  std::vector < fastjet::PseudoJet > puppiParticles;
+  std::vector < fastjet::PseudoJet > genmatchParticles;
   
-  //puppiTMVAContainer curEvent(allParticles, v_isPU, v_isCh,v_Tk,v_Vtx,v_VId); //TMVA
-  readCMSEvent   (fTree,    allParticles, v_isPU, v_isCh,v_Tk,v_Vtx,v_VId);        
+  puppiTMVAContainer *mvaEvent = 0; 
+  readCMSEvent   (fTree,    allParticles);
   readGenCMSEvent(fGenTree, genParticles);
-  //curEvent.refresh(allParticles, v_isPU, v_isCh,v_Tk,v_Vtx,v_VId); //TMVA
-  genParticles.clear();
-  allParticles.clear();
+  if(useMVA) mvaEvent = new puppiTMVAContainer(allParticles);
+  if(useMVA) mvaEvent->refresh(allParticles);
+  allParticles     .clear();
+  genParticles     .clear();
+  genmatchParticles.clear();
+  pfParticles      .clear();
+  chsParticles     .clear();
+  puppiParticles   .clear();
   while(true){
-    nEvts++;
-    if (nEvts % 10 == 0) std::cout << "event no. = " << nEvts << std::endl;
-    if (nEvts == maxEvents){ break; }
-    if(fin.eof()) break;
-    readCMSEvent(fTree, allParticles, v_isPU, v_isCh,v_Tk,v_Vtx,v_VId);        
-    readGenCMSEvent(fGenTree, genParticles);
-    puppiCleanContainer curEvent(allParticles, v_isPU, v_isCh);
-    //curEvent.refresh(allParticles, v_isPU, v_isCh,v_Tk,v_Vtx,v_VId); //TMVA
-    std::vector<fastjet::PseudoJet> puppiParticles = curEvent.puppiEvent(7,0.5);
-    analyzeEvent(lTree,curEvent.pfParticles(),curEvent.pfchsParticles(),puppiParticles,genParticles,curEvent.genParticles());        
-    genParticles.clear();
-    allParticles.clear();
-    v_isPU.clear();
-    v_isCh.clear();
-    v_Tk.clear();
-    v_Vtx.clear();
-    v_VId.clear();
-  }
-  lFile->cd();
-  lTree->Write();
+      nEvts++;
+      if (nEvts % 10 == 0) std::cout << "event no. = " << nEvts << std::endl;
+      if (nEvts == maxEvents){ break; }
+      readCMSEvent(fTree, allParticles);
+      readGenCMSEvent(fGenTree, genParticles);
+      if(!useMVA) {
+	puppiCleanContainer curEvent(allParticles);
+	puppiParticles      = curEvent.puppiEvent(7,0.5);	
+        pfParticles         = curEvent.pfParticles();
+        chsParticles        = curEvent.pfchsParticles();
+        genmatchParticles   = curEvent.genParticles();
+      }
+      if(useMVA) {
+	mvaEvent->refresh(allParticles);
+	puppiParticles      = mvaEvent->puppiEvent(7,0.5);	
+        pfParticles         = mvaEvent->pfParticles();
+        chsParticles        = mvaEvent->pfchsParticles();
+        genmatchParticles   = mvaEvent->genParticles();
+      }
+      analyzeEvent   (lTree,pfParticles,chsParticles,  puppiParticles,genParticles,genmatchParticles);        
+      analyzeMETEvent(      pfParticles,puppiParticles,genParticles  ,genmatchParticles);       
+      GridMedianBackgroundEstimator lGrid(5.0,0.8);
+      lGrid.set_particles(pfParticles);
+      fRho = lGrid.rho(); 
+      if(nEvts < -10) { 
+	std::vector < fastjet::PseudoJet > jets;  
+	std::vector < fastjet::PseudoJet > chsjets;  
+	std::vector < fastjet::PseudoJet > puppijets;  
+	std::vector < fastjet::PseudoJet > genjets;  
+	//Get All Jet Colelctions
+	getJets(genParticles,    genjets);
+	getJets(pfParticles,        jets);
+	getJets(chsParticles,    chsjets);
+	getJets(puppiParticles,puppijets);
+	std::stringstream pSS; pSS << "Label" << nEvts;
+	plotEvent(genParticles   ,"gen"  +pSS.str(),genjets );
+	plotEvent(pfParticles    ,"pf"   +pSS.str(),jets );
+	plotEvent(chsParticles   ,"pfchs"+pSS.str(),chsjets );
+	plotEvent(puppiParticles ,"PUPPI"+pSS.str(),puppijets );
+      }
+      genParticles.clear();
+      allParticles.clear();
+      pfParticles .clear();
+      chsParticles.clear();
+      puppiParticles.clear();
+      lMetTree->Fill();
+    }
+    lFile->cd();
+    lMetTree->Write();
+    lTree   ->Write();
 }
 void setupCMSReadOut(TTree *iTree ) { 
   fCount = 0;
-  iTree->SetBranchAddress("pt"   ,&fPartPt);
-  iTree->SetBranchAddress("eta"  ,&fPartEta);
-  iTree->SetBranchAddress("phi"  ,&fPartPhi);
-  iTree->SetBranchAddress("m"    ,&fPartM);
-  iTree->SetBranchAddress("genpt",&fGXPt);
-  iTree->SetBranchAddress("vtxid",&fVtxId);
-  iTree->SetBranchAddress("vtx"  ,&fPartVtx);
-  iTree->SetBranchAddress("trk"  ,&fPartTk);
+  iTree->SetBranchAddress("pt"    ,&fPartPt);
+  iTree->SetBranchAddress("eta"   ,&fPartEta);
+  iTree->SetBranchAddress("phi"   ,&fPartPhi);
+  iTree->SetBranchAddress("m"     ,&fPartM);
+  iTree->SetBranchAddress("genpt" ,&fGXPt);
+  iTree->SetBranchAddress("vtxid" ,&fVtxId);
+  iTree->SetBranchAddress("vtx"   ,&fPartVtx);
+  iTree->SetBranchAddress("trk"   ,&fPartTk);
+  iTree->SetBranchAddress("pftype",&fPartPFType);  
+  iTree->SetBranchAddress("depth" ,&fPartDepth);
+  iTree->SetBranchAddress("time"  ,&fPartTime);
+  iTree->SetBranchAddress("prob"  ,&fPartProb);
+  iTree->SetBranchAddress("chi2pv",&fPartChi2);
+  iTree->SetBranchAddress("chi2pu",&fPartChi2PU);
+  iTree->SetBranchAddress("dZ"   ,&fPartDZ);  
+  iTree->SetBranchAddress("d0"    ,&fPartD0);
 }
 void setupGenCMSReadOut(TTree *iTree ) { 
   fCount = 0;
@@ -214,35 +310,36 @@ void setupGenCMSReadOut(TTree *iTree ) {
   iTree->SetBranchAddress("genhi"   ,&fGPhi);
   iTree->SetBranchAddress("genm"    ,&fGM);
 }
-void readCMSEvent(TTree *iTree, std::vector< fastjet::PseudoJet > &allParticles, std::vector<int> &v_isPU, std::vector<int> &v_isCh,
-		  std::vector<float> &v_pTk,std::vector<float> &v_pVtx,std::vector<int> &v_pVId ){
-  float px, py, pz, e, pdgid, isCh, isPU, isPUGen = 0;
+void readCMSEvent(TTree *iTree, std::vector< RecoObj > &allParticles) { 
+  float px, py, pz, e, pdgid, isCh, isPU,isPV = 0;
   while(true){
     iTree->GetEntry(fCount);
     fCount++;
     if(fPartPt == -1) break;
-    isCh = (fVtxId != -1);
-    isPUGen = (fGXPt/fPartPt < 0.3);
-    isPU = (fVtxId > 0);
+    isCh   = (fVtxId > -1);//(fPartPFType == 1 || fPartPFType == 2 || fPartPFType == 3);
+    isPV   = (fVtxId == 0);
+    isPU   = (fGXPt/fPartPt < 0.2);//*(1-TMath::Min(fGXPt,float(1.))));
     TLorentzVector pVec; pVec.SetPtEtaPhiM(fPartPt,fPartEta,fPartPhi,fPartM);
-    px = pVec.Px();
-    py = pVec.Py();
-    pz = pVec.Pz();
-    e  = pVec.E();
-    if (px == 0 && py == 0 && pz == 0 && e == 0) return;
-    // fill vector of pseudojets
-    fastjet::PseudoJet curPseudoJet( px, py, pz, e );
-    if (fabs(curPseudoJet.eta()) < 5){
-      int lId = 0; if(isPU) lId++; if(isCh) lId+=2;
-      if(isPUGen) lId += 4;
-      curPseudoJet.set_user_index(lId);
-      allParticles.push_back( curPseudoJet );
-      v_isPU.push_back(isPU);
-      v_isCh.push_back(isCh);         
-      v_pTk .push_back(fPartTk);         
-      v_pVtx.push_back(fPartVtx);  
-      v_pVId.push_back(fVtxId);
-    }
+    int lId = 0; if(!isPV) lId++; if(isCh) lId+=2;
+    if(!isPU) lId += 4;
+    RecoObj curPseudoJet;
+    curPseudoJet.pt  = fPartPt;
+    curPseudoJet.eta = fPartEta;
+    curPseudoJet.phi = fPartPhi;
+    curPseudoJet.m   = fPartM;
+    curPseudoJet.id  = lId;
+    curPseudoJet.vtxId = fVtxId;
+    curPseudoJet.trkChi2 = fPartTk;
+    curPseudoJet.vtxChi2 = fPartVtx;
+    curPseudoJet.pfType  = fPartPFType;
+    curPseudoJet.depth   = fPartDepth;
+    curPseudoJet.time    = fPartTime;
+    curPseudoJet.expProb = fPartProb;
+    curPseudoJet.expChi2PU = fPartChi2PU;
+    curPseudoJet.expChi2   = fPartChi2;
+    curPseudoJet.d0        = fPartD0;
+    curPseudoJet.dZ        = fPartDZ;
+    allParticles.push_back( curPseudoJet );
   }
 }
 void readGenCMSEvent(TTree *iTree, std::vector< fastjet::PseudoJet > &allParticles) { 
@@ -259,35 +356,13 @@ void readGenCMSEvent(TTree *iTree, std::vector< fastjet::PseudoJet > &allParticl
     if (px == 0 && py == 0 && pz == 0 && e == 0) return;
     // fill vector of pseudojets
     fastjet::PseudoJet curPseudoJet( px, py, pz, e );
-    if (fabs(curPseudoJet.eta()) < 5){
-      int lId = 0; if(isPU) lId++; if(isCh) lId+=2;
-      curPseudoJet.set_user_index(lId);
-      allParticles.push_back( curPseudoJet );
-    }
-  }
-}
-void readEvent( std::vector< fastjet::PseudoJet > &allParticles, std::vector<int> &v_isPU, std::vector<int> &v_isCh ){
-  float npart, px, py, pz, e, pdgid, isCh, isPU = 0;
-  int pId = 0;
-  while(true){
-    if(fin.eof()) break;
-    fin  >> npart >> px >> py >> pz >> e >> pdgid >> isCh >> isPU;         
-    if (px == 0 && py == 0 && pz == 0 && e == 0) return;
-    // fill vector of pseudojets
-    fastjet::PseudoJet curPseudoJet( px, py, pz, e );
-    if (fabs(curPseudoJet.eta()) < 5){
-      int lId = 0; if(isPU) lId++; 
-      if(isCh && fabs(curPseudoJet.eta()) < 2.5) lId+=2;
-      curPseudoJet.set_user_index(lId);
-      allParticles.push_back( curPseudoJet );
-      v_isPU.push_back(isPU);
-      v_isCh.push_back(isCh);            
-      pId++;
-    }
+    int lId = 0; if(isPU) lId++; if(isCh) lId+=2;
+    lId += 4;
+    curPseudoJet.set_user_index(lId);
+    allParticles.push_back( curPseudoJet );
   }
 }
 void getJets(std::vector < fastjet::PseudoJet > &constits,std::vector < fastjet::PseudoJet > &jets) { 
-
   double rParam = 0.7;
   fastjet::JetDefinition jetDef(fastjet::antikt_algorithm, rParam);    
   int activeAreaRepeats = 1;
@@ -298,7 +373,6 @@ void getJets(std::vector < fastjet::PseudoJet > &constits,std::vector < fastjet:
   fastjet::ClusterSequenceArea* thisClustering_ = new fastjet::ClusterSequenceArea(constits, jetDef, fjAreaDefinition);
   std::vector<fastjet::PseudoJet> out_jets = sorted_by_pt(thisClustering_->inclusive_jets(5.0));
   for(unsigned int i0 = 0; i0 < out_jets.size(); i0++) jets.push_back(out_jets[i0]);
-  return;
 }
 void getCleanJets(std::vector < fastjet::PseudoJet > &constits,std::vector < fastjet::PseudoJet > &jets) { 
   double rParam = 0.7;
@@ -345,18 +419,18 @@ double deltaR(PseudoJet &iJet0,PseudoJet &iJet1) {
   if(fabs(pDPhi) > 2.*TMath::Pi()-fabs(pDPhi)) pDPhi =  2.*TMath::Pi()-fabs(pDPhi);
   return sqrt(pDPhi*pDPhi+pDEta*pDEta);
 }
-void analyzeEvent(TTree *iTree, std::vector < fastjet::PseudoJet > constits,std::vector < fastjet::PseudoJet > chsconstits, std::vector < fastjet::PseudoJet > trimconstits, std::vector < fastjet::PseudoJet > genconstits,std::vector < fastjet::PseudoJet > gen2constits) { 
+void analyzeEvent(TTree *iTree, std::vector < fastjet::PseudoJet > constits,std::vector < fastjet::PseudoJet > chsconstits, std::vector < fastjet::PseudoJet > puppiconstits, std::vector < fastjet::PseudoJet > genconstits,std::vector < fastjet::PseudoJet > genmatchconstits) { 
   std::vector < fastjet::PseudoJet > jets;  
-  std::vector < fastjet::PseudoJet > cleanjets;  
-  std::vector < fastjet::PseudoJet > trimjets;  
-  std::vector < fastjet::PseudoJet > genjets;  
   std::vector < fastjet::PseudoJet > chsjets;  
+  std::vector < fastjet::PseudoJet > puppijets;  
+  std::vector < fastjet::PseudoJet > genjets;  
+  std::vector < fastjet::PseudoJet > genmatchjets;  
   //Get All Jet Colelctions
-  getJets(constits,jets);
-  getJets(gen2constits,cleanjets);
-  getJets(trimconstits,trimjets);
-  getJets(genconstits,genjets);
-  getJets(chsconstits,chsjets);
+  getJets(constits,        jets);
+  getJets(chsconstits,     chsjets);
+  getJets(puppiconstits,   puppijets);
+  getJets(genconstits,     genjets);
+  getJets(genmatchconstits,genmatchjets);
   //Trimmer
   fastjet::Filter trimmer( fastjet::Filter(fastjet::JetDefinition(fastjet::kt_algorithm, 0.3), fastjet::SelectorPtFractionMin(0.05)));
   //Rho 
@@ -364,9 +438,10 @@ void analyzeEvent(TTree *iTree, std::vector < fastjet::PseudoJet > constits,std:
   lGrid.set_particles(constits);
   //Rho on the modified PF candiates
   GridMedianBackgroundEstimator lGridTrim(5.0,0.8);
-  lGridTrim.set_particles(trimconstits);
+  lGridTrim.set_particles(puppiconstits);
   GridMedianBackgroundEstimator lGridCHS(5.0,0.8);
-  lGridCHS.set_particles(chsconstits);
+  std::vector<PseudoJet> chsCentralConstits; for(unsigned int i0 = 0; i0 < chsconstits.size(); i0++) if(fabs(chsconstits[i0].eta()) < 2.5) chsCentralConstits.push_back(chsconstits[i0]);
+  lGridCHS.set_particles(chsCentralConstits);
   for(unsigned int i0 = 0; i0 < jets.size(); i0++) { 
     fPt    = -20; fEta    = -20; fPhi    = -20; fM    = -20; fTrM    = -20;
     fCPt   = -20; fCEta   = -20; fCPhi   = -20; fCM   = -20; fTrCM   = -20; 
@@ -380,6 +455,7 @@ void analyzeEvent(TTree *iTree, std::vector < fastjet::PseudoJet > constits,std:
     PseudoJet pArea    = jets[i0].area_4vector();
     //double    pTArea   = pTTrimmedJet.area();
     pCorrJet     -= lGrid.rho() * pArea;
+    fRho = lGrid.rho();
     fPt  = pCorrJet.pt();
     fEta = pCorrJet.eta();
     fPhi = pCorrJet.phi();
@@ -398,6 +474,7 @@ void analyzeEvent(TTree *iTree, std::vector < fastjet::PseudoJet > constits,std:
       pCorrJet  = chsjets[iId];
       pArea     = chsjets[iId].area_4vector();
       pCorrJet -= lGridCHS.rho() * pArea;
+      if(fabs(chsjets[iId].eta()) > 2.5) pCorrJet -= lGrid   .rho() * pArea;
       pTTrimmedJet = (trimmer)(chsjets[iId]);
       fCPt  = pCorrJet.pt();
       fCEta = pCorrJet.eta();
@@ -423,45 +500,268 @@ void analyzeEvent(TTree *iTree, std::vector < fastjet::PseudoJet > constits,std:
       fTrGenM = pTrimmedJet.m();
     }
     iId = -1;
-    for(unsigned int i1 = 0; i1 < trimjets.size(); i1++) { 
-      if(trimjets[i1].pt() < 5) continue;
-      double pDR = deltaR(jets[i0],trimjets[i1]);
+    for(unsigned int i1 = 0; i1 < puppijets.size(); i1++) { 
+      if(puppijets[i1].pt() < 5) continue;
+      double pDR = deltaR(jets[i0],puppijets[i1]);
       if(pDR > 0.2) continue;
       iId = i1;
       break;
     }
     if(iId > -1) { 
-      fTPt  = trimjets[iId].pt();
-      fTEta = trimjets[iId].eta();
-      fTPhi = trimjets[iId].phi();
-      fTM   = trimjets[iId].m();
+      fTPt  = puppijets[iId].pt();
+      fTEta = puppijets[iId].eta();
+      fTPhi = puppijets[iId].phi();
+      fTM   = puppijets[iId].m();
       //Calculate rho again
-      PseudoJet pTCorrJet = trimjets[iId];
-      //PseudoJet pTArea    = trimjets[iId].area_4vector();
+      PseudoJet pTCorrJet = puppijets[iId];
       pTCorrJet -= lGridTrim.rho() * pArea;
       fTCPt  = pTCorrJet.pt();
       fTCEta = pTCorrJet.eta();
       fTCPhi = pTCorrJet.phi();
       fTCM   = pTCorrJet.m();
-      fastjet::PseudoJet pTrimmedJet = (trimmer)(trimjets[iId]);
+      fastjet::PseudoJet pTrimmedJet = (trimmer)(puppijets[iId]);
       fTrTM  = pTrimmedJet.m();
     }
     iId = -1;
-    for(unsigned int i1 = 0; i1 < cleanjets.size(); i1++) { 
-      if(cleanjets[i1].pt() < 5) continue;
-      double pDR = deltaR(jets[i0],cleanjets[i1]);
+    for(unsigned int i1 = 0; i1 < genmatchjets.size(); i1++) { 
+      if(genmatchjets[i1].pt() < 5) continue;
+      double pDR = deltaR(jets[i0],genmatchjets[i1]);
       if(pDR > 0.2) continue;
       iId = i1;
       break;
     } 
     if(iId > -1) { 
-      fClPt  = cleanjets[iId].pt();
-      fClEta = cleanjets[iId].eta();
-      fClPhi = cleanjets[iId].phi();
-      fClM   = cleanjets[iId].m();
-      //fastjet::PseudoJet pTrimmedJet = (trimmer)(cleanjets[iId]);
-      //fTrClM  = pTrimmedJet.m();
+      fClPt  = genmatchjets[iId].pt();
+      fClEta = genmatchjets[iId].eta();
+      fClPhi = genmatchjets[iId].phi();
+      fClM   = genmatchjets[iId].m();
     }
     iTree->Fill();
   }
+}
+float *met( std::vector< fastjet::PseudoJet > &iParticles) { 
+  float *lMet = new float[3]; 
+  lMet[0] = 0; 
+  lMet[1] = 0; 
+  lMet[2] = 0; 
+  PseudoJet flow;
+  for(unsigned int i=0; i<iParticles.size(); i++){
+    flow    += iParticles[i];
+    lMet[2] += iParticles[i].pt();
+  }
+  lMet[0] = flow.pt();
+  lMet[1] = flow.phi();
+  return lMet;
+}
+void analyzeMETEvent(std::vector < fastjet::PseudoJet > constits, std::vector < fastjet::PseudoJet > puppiconstits, std::vector < fastjet::PseudoJet > genconstits,std::vector < fastjet::PseudoJet > genmatchconstits) { 
+  float *pGenMet     =  met(genconstits);
+  float *pPFMet      =  met(constits);
+  float *pTrimmedMet =  met(genmatchconstits);
+  float *pPuppiMet   =  met(puppiconstits);
+      
+  fMet      = pPFMet[0]; 
+  fMetPhi   = pPFMet[1]; 
+  fSumet    = pPFMet[2]; 
+  fGMet     = pGenMet[0]; 
+  fGMetPhi  = pGenMet[1]; 
+  fGSumet   = pGenMet[2]; 
+  fTMet     = pTrimmedMet[0]; 
+  fTMetPhi  = pTrimmedMet[1]; 
+  fTSumet   = pTrimmedMet[2]; 
+  fPMet      = pPuppiMet[0]; 
+  fPMetPhi   = pPuppiMet[1]; 
+  fPSumet    = pPuppiMet[2]; 
+} 
+
+
+void plotEvent( std::vector < fastjet::PseudoJet > constits, std::string iName, std::vector < fastjet::PseudoJet > jets ) { 
+    
+    double maxCell = 0;
+    TH2F* h2d    = new TH2F( "h2d"   ,";#eta;#phi;pT (GeV)",50, -5,5, 50,0,2*TMath::Pi() );
+    TH2F* h2d_PU = new TH2F( "h2d_PU",";#eta;#phi;pT (GeV)",50, -5,5, 50,0,2*TMath::Pi() );
+    
+    for (unsigned int i = 0; i < constits.size(); i++){
+      int curBin = h2d->FindBin(constits[i].eta(),constits[i].phi());
+      if(constits[i].pt() > maxCell) maxCell = constits[i].pt();
+      if(constits[i].user_index() > 3) h2d   ->SetBinContent( curBin, h2d   ->GetBinContent(curBin) + constits[i].pt() );
+      if(constits[i].user_index() < 4) h2d_PU->SetBinContent( curBin, h2d_PU->GetBinContent(curBin) + constits[i].pt() );
+    }
+    
+    TCanvas* can = new TCanvas("can","can",800,600);
+    h2d->SetMaximum( 10);//1.1*max(h2d->GetMaximum(),h2d_PU->GetMaximum()) );
+    h2d->SetMinimum( 1e-1 );
+    h2d_PU->SetMaximum( 10);
+    h2d_PU->SetMinimum( 1e-1 );
+    h2d   ->Draw("COLZ");
+    h2d_PU->SetLineWidth( 1 );
+    h2d_PU->Draw("BOX SAME");
+    //can->SetLogz();
+    
+    //draw jets
+    for (unsigned j = 0; j < jets.size(); j++){
+        TEllipse* cir = new TEllipse(jets[j].eta(),jets[j].phi(),0.7,0.7);
+        cir->SetFillStyle(0);
+        if (jets[j].pt() > 50 && jets[j].pt() < 200){
+            cir->SetLineColor( 7 );
+            cir->SetLineWidth( 2 );            
+        }
+        else if (jets[j].pt() > 200){
+            cir->SetLineColor( 4 );
+            cir->SetLineWidth( 2 );            
+        }
+        else{
+            cir->SetLineColor( 6 );
+        }
+        
+        cir->Draw("sames");
+    }
+    can->SaveAs((iName+".png").c_str());
+    delete can;
+    delete h2d;
+    delete h2d_PU;
+}
+void setTDRStyle() {
+    TStyle *tdrStyle = new TStyle("tdrStyle","Style for P-TDR");
+    
+    // For the canvas:
+    tdrStyle->SetCanvasBorderMode(0);
+    tdrStyle->SetCanvasColor(kWhite);
+    tdrStyle->SetCanvasDefH(750); //Height of canvas
+    tdrStyle->SetCanvasDefW(1050); //Width of canvas
+    tdrStyle->SetCanvasDefX(0);   //POsition on screen
+    tdrStyle->SetCanvasDefY(0);
+    
+    // For the Pad:
+    tdrStyle->SetPadBorderMode(0);
+    // tdrStyle->SetPadBorderSize(Width_t size = 1);
+    tdrStyle->SetPadColor(kWhite);
+    tdrStyle->SetPadGridX(false);
+    tdrStyle->SetPadGridY(false);
+    tdrStyle->SetGridColor(0);
+    tdrStyle->SetGridStyle(3);
+    tdrStyle->SetGridWidth(1);
+    
+    // For the frame:
+    tdrStyle->SetFrameBorderMode(0);
+    tdrStyle->SetFrameBorderSize(1);
+    tdrStyle->SetFrameFillColor(0);
+    tdrStyle->SetFrameFillStyle(0);
+    tdrStyle->SetFrameLineColor(1);
+    tdrStyle->SetFrameLineStyle(1);
+    tdrStyle->SetFrameLineWidth(1);
+    
+    // For the histo:
+    // tdrStyle->SetHistFillColor(1);
+    // tdrStyle->SetHistFillStyle(0);
+    tdrStyle->SetHistLineColor(1);
+    tdrStyle->SetHistLineStyle(0);
+    tdrStyle->SetHistLineWidth(1);
+    // tdrStyle->SetLegoInnerR(Float_t rad = 0.5);
+    // tdrStyle->SetNumberContours(Int_t number = 20);
+    
+    tdrStyle->SetEndErrorSize(2);
+    //  tdrStyle->SetErrorMarker(20);
+    tdrStyle->SetErrorX(0.);
+    
+    tdrStyle->SetMarkerStyle(20);
+    
+    //For the fit/function:
+    tdrStyle->SetOptFit(1);
+    tdrStyle->SetFitFormat("5.4g");
+    tdrStyle->SetFuncColor(2);
+    tdrStyle->SetFuncStyle(1);
+    tdrStyle->SetFuncWidth(1);
+    
+    //For the date:
+    tdrStyle->SetOptDate(0);
+    // tdrStyle->SetDateX(Float_t x = 0.01);
+    // tdrStyle->SetDateY(Float_t y = 0.01);
+    
+    // For the statistics box:
+    tdrStyle->SetOptFile(0);
+    tdrStyle->SetOptStat(0); // To display the mean and RMS:   SetOptStat("mr");
+    tdrStyle->SetStatColor(kWhite);
+    tdrStyle->SetStatFont(42);
+    tdrStyle->SetStatFontSize(0.010);
+    tdrStyle->SetStatTextColor(1);
+    tdrStyle->SetStatFormat("6.4g");
+    tdrStyle->SetStatBorderSize(1);
+    tdrStyle->SetStatH(0.25);
+    tdrStyle->SetStatW(0.15);
+    // tdrStyle->SetStatStyle(Style_t style = 1001);
+    // tdrStyle->SetStatX(Float_t x = 0);
+    // tdrStyle->SetStatY(Float_t y = 0);
+    
+    // Margins:
+    tdrStyle->SetPadTopMargin(0.05);
+    tdrStyle->SetPadBottomMargin(0.13);
+    tdrStyle->SetPadLeftMargin(0.17);
+    tdrStyle->SetPadRightMargin(0.17);
+    
+    // For the Global title:
+    
+    tdrStyle->SetOptTitle(0);
+    tdrStyle->SetTitleFont(42);
+    tdrStyle->SetTitleColor(1);
+    tdrStyle->SetTitleTextColor(1);
+    tdrStyle->SetTitleFillColor(10);
+    tdrStyle->SetTitleFontSize(0.005);
+    // tdrStyle->SetTitleH(0); // Set the height of the title box
+    // tdrStyle->SetTitleW(0); // Set the width of the title box
+    // tdrStyle->SetTitleX(0); // Set the position of the title box
+    // tdrStyle->SetTitleY(0.985); // Set the position of the title box
+    // tdrStyle->SetTitleStyle(Style_t style = 1001);
+    // tdrStyle->SetTitleBorderSize(2);
+    
+    // For the axis titles:
+    
+    tdrStyle->SetTitleColor(1, "XYZ");
+    tdrStyle->SetTitleFont(42, "XYZ");
+    tdrStyle->SetTitleSize(0.06, "XYZ");
+    // tdrStyle->SetTitleXSize(Float_t size = 0.02); // Another way to set the size?
+    // tdrStyle->SetTitleYSize(Float_t size = 0.02);
+    tdrStyle->SetTitleXOffset(0.9);
+    tdrStyle->SetTitleYOffset(1.25);
+    // tdrStyle->SetTitleOffset(1.1, "Y"); // Another way to set the Offset
+    
+    // For the axis labels:
+    
+    tdrStyle->SetLabelColor(1, "XYZ");
+    tdrStyle->SetLabelFont(42, "XYZ");
+    tdrStyle->SetLabelOffset(0.007, "XYZ");
+    tdrStyle->SetLabelSize(0.05, "XYZ");
+    
+    // For the axis:
+    
+    tdrStyle->SetAxisColor(1, "XYZ");
+    tdrStyle->SetStripDecimals(kTRUE);
+    tdrStyle->SetTickLength(0.03, "XYZ");
+    tdrStyle->SetNdivisions(505, "XYZ");
+    tdrStyle->SetPadTickX(1);  // To get tick marks on the opposite side of the frame
+    tdrStyle->SetPadTickY(1);
+    
+    // Change for log plots:
+    tdrStyle->SetOptLogx(0);
+    tdrStyle->SetOptLogy(0);
+    tdrStyle->SetOptLogz(0);
+    
+    // Postscript options:
+    tdrStyle->SetPaperSize(20.,20.);
+    // tdrStyle->SetLineScalePS(Float_t scale = 3);
+    // tdrStyle->SetLineStyleString(Int_t i, const char* text);
+    // tdrStyle->SetHeaderPS(const char* header);
+    // tdrStyle->SetTitlePS(const char* pstitle);
+    
+    // tdrStyle->SetBarOffset(Float_t baroff = 0.5);
+    // tdrStyle->SetBarWidth(Float_t barwidth = 0.5);
+    // tdrStyle->SetPaintTextFormat(const char* format = "g");
+    // tdrStyle->SetPalette(Int_t ncolors = 0, Int_t* colors = 0);
+    // tdrStyle->SetTimeOffset(Double_t toffset);
+    // tdrStyle->SetHistMinimumZero(kTRUE);
+    
+    tdrStyle->SetPalette(1);
+    
+    
+    tdrStyle->cd();
+    
 }

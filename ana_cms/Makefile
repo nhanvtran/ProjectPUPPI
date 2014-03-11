@@ -4,23 +4,25 @@
 FASTJETLOCATION=/Users/Phil/Physics/JWJ/git_v2/ProjectPUPPI/fastjet-3.0.6
 FASTJETINC :=`$(FASTJETLOCATION)/fastjet-config --cxxflags --plugins`
 FASTJETLIB :=`$(FASTJETLOCATION)/fastjet-config --libs --plugins`
-BACONLIB   :=-L`pwd`/Bacon/BaconAna/DataFormatsOffline/ -lBacon  -Wl,-rpath,`pwd`/Bacon/BaconAna/DataFormatsOffline/ -lm -ldl
+BACONLIB   :=-L/Users/Phil/Physics/JWJ/git_v2/ProjectPUPPI/ana_cms/Bacon/BaconAna/DataFormatsOffline/ -lBacon  -Wl,-rpath,/Users/Phil/Physics/JWJ/git_v2/ProjectPUPPI/ana_cms/Bacon/BaconAna/DataFormatsOffline/ -lm -ldl
 ROOTINC := `root-config --glibs --cflags` -lTMVA
 
 CC = g++
 
 # ----------------------------------------
 
+
 all: runBacon puppiCMSAnalyzer puppiJetAnalyzer 
 
-puppiJetAnalyzer: puppiJetAnalyzer.cpp  puppiTMVAContainer.cc puppiCleanContainer.cc
-	$(CC) -o puppiJetAnalyzer $(ROOTINC) $(FASTJETINC) $(FASTJETLIB) -lvectorDict -lJetCleanser puppiJetAnalyzer.cpp   puppiTMVAContainer.cc puppiTMVAContainer.hh puppiCleanContainer.cc puppiCleanContainer.hh NoTrees.cc NoTrees.hh -I.
+puppiJetAnalyzer: puppiJetAnalyzer.cpp  puppiTMVAContainer.cc
+	$(CC) -o puppiJetAnalyzer $(ROOTINC) $(FASTJETINC) $(FASTJETLIB) -lvectorDict -lJetCleanser puppiJetAnalyzer.cpp RecoObj.hh   puppiTMVAContainer.cc puppiTMVAContainer.hh puppiCleanContainer.cc puppiCleanContainer.hh NoTrees.cc NoTrees.hh -I.
 
 runBacon: runBacon.cpp
 	$(CC) -o runBacon    $(ROOTINC) $(FASTJETINC) $(FASTJETLIB) $(BACONLIB) -lvectorDict -lJetCleanser runBacon.cpp    GenMatcher.cc  -I.
 
 puppiCMSAnalyzer: 
-	$(CC) -o puppiCMSAnalyzer $(ROOTINC) $(FASTJETINC) $(FASTJETLIB) $(BACONLIB) -lvectorDict -lJetCleanser puppiCMSAnalyzer.cpp puppiContainer.cc puppiContainer.hh NoTrees.cc NoTrees.hh  -I.
+	$(CC) -o puppiCMSAnalyzer $(ROOTINC) $(FASTJETINC) $(FASTJETLIB) $(BACONLIB) -lvectorDict -lJetCleanser puppiCMSAnalyzer.cpp RecoObj.hh puppiContainer.cc puppiContainer.hh NoTrees.cc NoTrees.hh  -I.
+
 
 clean:
 	rm runBacon

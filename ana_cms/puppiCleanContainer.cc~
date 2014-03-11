@@ -91,11 +91,11 @@ std::vector<fastjet::PseudoJet> puppiCleanContainer::puppiEvent     (int iOpt,do
   double lRMS0=fRMS;  
   int lNEvents    = _vals.size();
   
-  getRMSAvg(8,_pfParticles,_pfParticles,iQuant,0.5,true);
+  getRMSAvg(8,_pfParticles,_pfParticles,0.5,0.5,true);
   double lMed1=fMed; 
   double lRMS1=fRMS;
 
-  if(_isTuned) getRMSAvg(10,_pfParticles,_pfParticles,iQuant,0.5,true);
+  if(_isTuned) getRMSAvg(10,_pfParticles,_pfParticles,0.5,true);
   double lMed2=fMed; 
   double lRMS2=fRMS*0.5;  
   for(int i0 = 0; i0 < lNEvents; i0++) {
