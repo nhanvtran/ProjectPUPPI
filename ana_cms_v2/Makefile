@@ -14,7 +14,7 @@ CC = g++
 # ----------------------------------------
 
 
-all: runBacon puppiCMSAnalyzer puppiJetAnalyzer puppiDumbAnalyzer
+all: puppiSimpleAnalyzer
 
 ## FOR MAVERICKS (CLANG)
 
@@ -26,7 +26,4 @@ puppiSimpleAnalyzer: puppiSimpleAnalyzer
 ##	$(CC) -o puppiSimpleAnalyzer $(ROOTINC) $(FASTJETINC) $(FASTJETLIB) $(BACONLIB) -lvectorDict -lJetCleanser puppiSimpleAnalyzer.cpp puppiCleanContainer.cc puppiCleanContainer.hh NoTrees.cc NoTrees.hh -I.
 
 clean:
-	rm runBacon
-	rm puppiCMSAnalyzer
-	rm puppiJetAnalyzer
-	rm puppiDumbAnalyzer
+	rm puppiSimpleAnalyzer
