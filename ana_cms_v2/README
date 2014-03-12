@@ -1,0 +1,17 @@
+RECIPE...
+
+cd Bacon/BaconAna/DataFormatsOffline/
+bash remake.sh
+cd -
+## change some paths in Makefile and maybe some mods for clang
+make
+
+
+Now make a gen ntuple
+./runBacon #events Ntuple.root 1
+mv Output.root GenOutput.root
+Now make a regular ntuple
+./runBacon #events Ntuple.root 0
+mv Ouptut.root RecoOutput.root
+Run puppi (algorithm)
+./puppiJetAnalyzer #events
