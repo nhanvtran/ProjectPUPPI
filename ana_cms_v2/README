@@ -1,17 +1,15 @@
 RECIPE...
 
-cd Bacon/BaconAna/DataFormatsOffline/
-bash remake.sh
-cd -
+$ cd Bacon/BaconAna/DataFormatsOffline/
+$ bash remake.sh
+$ cd -
 ## change some paths in Makefile and maybe some mods for clang
-make
+$ make
 
-
-Now make a gen ntuple
-./runBacon #events Ntuple.root 1
-mv Output.root GenOutput.root
-Now make a regular ntuple
-./runBacon #events Ntuple.root 0
-mv Ouptut.root RecoOutput.root
-Run puppi (algorithm)
-./puppiJetAnalyzer #events
+Now run PUPPI on Bacon output!
+$ ./puppiSimpleAnalyzer 10 "data/bacon_ttbar.root" "ttb" 0
+Inputs:
+    [1] maxEvents
+    [2] input file
+    [3] output label
+    [4] dummy for the moment (set 0)
