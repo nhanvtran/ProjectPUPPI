@@ -20,7 +20,7 @@ from optparse import OptionParser
 parser = OptionParser()
 
 parser.add_option('-b', action='store_true', dest='noX', default=False, help='no X11 windows')
-parser.add_option('--nPU',action="store",type="int",dest="nPU",default=80)
+parser.add_option('--nPU',action="store",type="int",dest="nPU",default=22)
 
 (options, args) = parser.parse_args()
 
@@ -100,7 +100,7 @@ if __name__ == '__main__':
     
     #types = ["gen","pf","pfchs","pf_tr","pf_cl","pf_puppi"];
     #trees = [tree_gen, tree_pf, tree_pfchs, tree_pf_tr, tree_pf_cl,tree_pf_puppi];
-    types = ["LV","PUPPI","PFlow","PFlowCHS"];
+    types = ["GEN","PUPPI","PFlow","PFlowCHS"];
     trees = [tree_gen,tree_pf_puppi,tree_pf,tree_pfchs];
     colors = [1,2,4,6,7,2];
     linestyles = [2,1,1,1,1,2];
