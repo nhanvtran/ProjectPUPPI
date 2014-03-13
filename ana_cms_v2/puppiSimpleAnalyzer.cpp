@@ -273,7 +273,7 @@ int main( int argc, char **argv ) {
         //
 
         
-        if (nEvts < 100 and nEvts > 0){
+        if (nEvts < 50 and nEvts > 0){
             
             std::vector<float> puppiWeights_chLV = curEvent.getPuppiWeights_chLV();
             std::vector<float> puppiWeights_all = curEvent.getPuppiWeights_all();
@@ -358,7 +358,7 @@ void readCMSEvent(TTree *iTree, std::vector< RecoObj > &allParticles) {
     
 //        if(fPartPt == -1) break;
         TPFPart *pPart = (TPFPart*)((*fPFPart)[i]);
-        isCh   = (pPart->vtxId > -1);//(fPartPFType == 1 || fPartPFType == 2 || fPartPFType == 3);
+        isCh   = (abs(pPart->q) > 0);//(fPartPFType == 1 || fPartPFType == 2 || fPartPFType == 3);
         isPV   = (pPart->vtxId <= 0);
         //isPU   = (fGXPt/fPartPt < 0.2);//*(1-TMath::Min(fGXPt,float(1.))));
         //if (isCh && isPU) isPU = true;
