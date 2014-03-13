@@ -30,8 +30,9 @@ protected:
         
   //Helper Functions
     double  goodVar  (fastjet::PseudoJet &iPart,std::vector<fastjet::PseudoJet> &iParts, int iOpt);    
-    void    getRMSAvg(int iOpt,std::vector<fastjet::PseudoJet> &iConstits,std::vector<fastjet::PseudoJet> &iParticles,double iQuant,double iPtRMS,bool isForward);
+    void    getRMSAvg(int iOpt,std::vector<fastjet::PseudoJet> &iConstits,std::vector<fastjet::PseudoJet> &iParticles,double iQuant,double iPtRMS);
     double  compute  (int iOpt,double iVal,double iMed,double iRMS,double iChi2Exp);
+    double  getChi2FromdZ(double iDZ);
     std::vector<RecoObj> _recoParticles;
     std::vector<PseudoJet> _pfParticles;
     std::vector<PseudoJet> _pfchsParticles;    
@@ -41,7 +42,9 @@ protected:
     std::vector<double> _vals;
     double fMed;
     double fRMS;
-    double fMin;
+    double fMedHEta;
+    double fRMSHEta;
+   double fNeutralMinE;
     bool _isTuned;
     bool _isExperiment;
     

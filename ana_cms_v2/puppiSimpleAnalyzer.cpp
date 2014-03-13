@@ -97,7 +97,7 @@ bool isPFCHS;
 /////////////////////////////////////////////////////////////////////
 void                              setupCMSReadOut(TTree *iTree );
 void                              readGenCMSEvent(TTree *iTree, std::vector< fastjet::PseudoJet > &allParticles );
-void                              readCMSEvent   (TTree *iTree, std::vector< RecoObj >            &allParticles );
+void                              readCMSEvent   (TTree *iTree, std::vector< RecoObj >            &allParticles ,bool iUseDeltaZ);
 std::vector< fastjet::PseudoJet > analyzeEvent( std::vector < fastjet::PseudoJet > constits, TTree &tree, char* tag, double vRparam );
 void                              plotEvent( std::vector < fastjet::PseudoJet > constits, char* name, std::vector < fastjet::PseudoJet > jets );
 void                              setTDRStyle();
@@ -196,9 +196,10 @@ int main( int argc, char **argv ) {
     
     int maxEvents  = atoi(argv[1]);
     char *recoFile = argv[2];;
-    char *olabel  = argv[3];
-    int useMVA     = atoi(argv[4]);
-    
+    char *olabel   = argv[3];
+    //int useMVA     = atoi(argv[4]);
+    int useDeltaZ  = false; //atoi(argv[5])
+    cout << "==> " << olabel << endl;
     TFile* lReadout = new TFile(recoFile);
     TTree* fTree    = (TTree*) lReadout->FindObjectAny("Events");
     setupCMSReadOut(fTree);
@@ -240,7 +241,7 @@ int main( int argc, char **argv ) {
         if (nEvts % 10 == 0) std::cout << "file is " << ((float) nEvts)*100./maxEvents << "% done" << std::endl;
         
         if (nEvts == maxEvents){ break; }
-        readCMSEvent(fTree, allParticles);
+        readCMSEvent(fTree, allParticles,useDeltaZ);
         readGenCMSEvent(fTree, genParticles);
         
         puppiCleanContainer curEvent(allParticles);
@@ -350,26 +351,22 @@ void setupCMSReadOut(TTree *iTree ) {
     
 }
 
-void readCMSEvent(TTree *iTree, std::vector< RecoObj > &allParticles) {
+void readCMSEvent(TTree *iTree, std::vector< RecoObj > &allParticles,bool iUseDeltaZ) {
     float px, py, pz, e, pdgid, isCh, isPU,isPV = 0;
     iTree->GetEntry(fCount);
-//    std::cout << "fPFPart->GetEntriesFast() = " << fPFPart->GetEntriesFast() << std::endl;
     for (int i = 0; i < fPFPart->GetEntriesFast(); i++){
-    
-//        if(fPartPt == -1) break;
         TPFPart *pPart = (TPFPart*)((*fPFPart)[i]);
-        isCh   = (pPart->vtxId > -1);//(fPartPFType == 1 || fPartPFType == 2 || fPartPFType == 3);
+	//Standard PF No PU Association
+	//Charged particles are counted if they have a vertex assignment
+        // PV particles are all PV chargd particles + all unassociated particles
+
+        isCh   = (pPart->pfType == 1 || pPart->pfType == 2 || pPart->pfType == 3) && (pPart->vtxId > -1);
         isPV   = (pPart->vtxId <= 0);
-        //isPU   = (fGXPt/fPartPt < 0.2);//*(1-TMath::Min(fGXPt,float(1.))));
-        //if (isCh && isPU) isPU = true;
-        //else isPU = false;
-        
+        if(iUseDeltaZ) isCh   = (pPart->pfType == 1 || pPart->pfType == 2 || pPart->pfType == 3) && (pPart->vtxId > -1 || fabs(pPart->dz) < 0.2) ;
+	if(iUseDeltaZ) isPV   = (pPart->vtxId  == 0  || (fabs(pPart->dz) < 0.2 && isCh));
+	
         TLorentzVector pVec; pVec.SetPtEtaPhiM(pPart->pt,pPart->eta,pPart->phi,pPart->m);
-        // wtf?
         // Id: 0 = NeLV, 1 = NePU, 2 = ChLV, 3 = ChPU
-        ////int lId = 0;
-        ////if(!isPV) lId++; if(isCh) lId+=2;
-        ////if(!isPU) lId += 4;
         int lID = -1;
         if (!isCh) lID = 1;
         if (isCh && isPV) lID = 2;
