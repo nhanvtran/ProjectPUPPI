@@ -12,7 +12,7 @@ using namespace fastjet;
 class puppiCleanContainer{
 public:
     // default ctor
-  puppiCleanContainer(std::vector<RecoObj> inParticles, bool iExperiment=true,bool iTuned=true);
+  puppiCleanContainer(std::vector<RecoObj> inParticles, bool iExperiment=false,bool iTuned=true);
     ~puppiCleanContainer(); 
     std::vector<fastjet::PseudoJet> genParticles(){ return _genParticles; }
     std::vector<fastjet::PseudoJet> pfParticles(){ return _pfParticles; }    

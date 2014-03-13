@@ -198,7 +198,7 @@ int main( int argc, char **argv ) {
     char *recoFile = argv[2];;
     char *olabel   = argv[3];
     //int useMVA     = atoi(argv[4]);
-    int useDeltaZ  = false; //atoi(argv[5])
+    int useDeltaZ  = true; //atoi(argv[5])
     cout << "==> " << olabel << endl;
     TFile* lReadout = new TFile(recoFile);
     TTree* fTree    = (TTree*) lReadout->FindObjectAny("Events");
@@ -274,7 +274,7 @@ int main( int argc, char **argv ) {
         //
 
         
-        if (nEvts < 50 and nEvts > 0){
+        if (nEvts < -100 and nEvts > 0){
             
             std::vector<float> puppiWeights_chLV = curEvent.getPuppiWeights_chLV();
             std::vector<float> puppiWeights_all = curEvent.getPuppiWeights_all();
@@ -356,15 +356,11 @@ void readCMSEvent(TTree *iTree, std::vector< RecoObj > &allParticles,bool iUseDe
     iTree->GetEntry(fCount);
     for (int i = 0; i < fPFPart->GetEntriesFast(); i++){
         TPFPart *pPart = (TPFPart*)((*fPFPart)[i]);
-<<<<<<< HEAD
 	//Standard PF No PU Association
 	//Charged particles are counted if they have a vertex assignment
         // PV particles are all PV chargd particles + all unassociated particles
 
-        isCh   = (pPart->pfType == 1 || pPart->pfType == 2 || pPart->pfType == 3) && (pPart->vtxId > -1);
-=======
-        isCh   = (abs(pPart->q) > 0);//(fPartPFType == 1 || fPartPFType == 2 || fPartPFType == 3);
->>>>>>> 93a4ca48f5a1a1fce8ee21a2876ce6e66ad9163d
+        isCh   = (fabs(pPart->q) > 0) && (pPart->vtxId > -1);
         isPV   = (pPart->vtxId <= 0);
         if(iUseDeltaZ) isCh   = (pPart->pfType == 1 || pPart->pfType == 2 || pPart->pfType == 3) && (pPart->vtxId > -1 || fabs(pPart->dz) < 0.2) ;
 	if(iUseDeltaZ) isPV   = (pPart->vtxId  == 0  || (fabs(pPart->dz) < 0.2 && isCh));

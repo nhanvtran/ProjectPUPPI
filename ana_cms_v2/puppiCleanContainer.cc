@@ -15,7 +15,7 @@ using namespace fastjet;
 puppiCleanContainer::puppiCleanContainer(std::vector<RecoObj> inParticles,bool iExperiment,bool iTuned){
     _isExperiment = iExperiment;
     _isTuned      = iTuned;
-    fNeutralMinE  = 0.5;  //=> This can be tuned
+    fNeutralMinE  = 0.1;  //=> This can be tuned
     //Clear everything
     _recoParticles.resize(0);
     _pfParticles.resize(0);
@@ -92,7 +92,7 @@ double puppiCleanContainer::compute(int iOpt,double iVal,double iMed,double iRMS
 double puppiCleanContainer::getChi2FromdZ(double iDZ) { 
   //We need to obtain prob of PU + (1-Prob of LV)
   // Prob(LV) = Gaus(dZ,sigma) where sigma = 1.5mm  (its really more like 1mm)
-  double lProbLV = ROOT::Math::normal_cdf_c(fabs(iDZ),0.15)*2.; //*2 is to do it double sided
+  double lProbLV = ROOT::Math::normal_cdf_c(fabs(iDZ),0.2)*2.; //*2 is to do it double sided
   double lProbPU = 1-lProbLV;
   if(lProbPU <= 0) lProbPU = 1e-16;   //Quick Trick to through out infs
   if(lProbPU >= 0) lProbPU = 1-1e-16; //Ditto
@@ -135,7 +135,7 @@ std::vector<fastjet::PseudoJet> puppiCleanContainer::puppiEvent     (int iOpt,do
 	double pChi2   = 0;
         if(_isExperiment) {
 	  //Compute an Experimental Puppi Weight with delta Z info (very simple example)
-	  double pChi2 = getChi2FromdZ(_recoParticles[i0].dZ);
+	  pChi2 = getChi2FromdZ(_recoParticles[i0].dZ);
 	  //Now make sure Neutrals are not set
 	  if(_recoParticles[i0].pfType > 3) pChi2 = 0;
 	}
