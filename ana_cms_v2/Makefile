@@ -1,8 +1,7 @@
 # ----------------------------------------
 # inputs 
 
-#FASTJETLOCATION=/Users/Phil/Physics/JWJ/git_v2/ProjectPUPPI/fastjet-3.0.6
-FASTJETLOCATION=/Users/ntran/Documents/Research/CMS/PhysicsAnalysis/fastjet/fastjet-install/bin
+FASTJETLOCATION=/Users/Phil/Physics/JWJ/git_v2/ProjectPUPPI/fastjet-3.0.6
 FASTJETINC :=`$(FASTJETLOCATION)/fastjet-config --cxxflags --plugins`
 FASTJETLIB :=`$(FASTJETLOCATION)/fastjet-config --libs --plugins`
 #BACONLIB   :=-L/Users/Phil/Physics/JWJ/git_v2/ProjectPUPPI/ana_cms/Bacon/BaconAna/DataFormatsOffline/ -lBacon  -Wl,-rpath,/Users/Phil/Physics/JWJ/git_v2/ProjectPUPPI/ana_cms/Bacon/BaconAna/DataFormatsOffline/ -lm -ldl

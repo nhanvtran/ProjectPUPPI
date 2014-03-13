@@ -349,11 +349,11 @@ void plotEvent( std::vector < fastjet::PseudoJet > constits, char* name, std::ve
     h2d->SetMaximum( 1.1*max(h2d->GetMaximum(),h2d_PU->GetMaximum()) );
     h2d->SetMinimum( 1e-1 );
 //    h2d->SetLineWidth( 2 );
-    h2d->Draw("COLZ");
+    h2d->Draw("BOX");
     h2d_PU->SetLineWidth( 1 );
     h2d_PU->Draw("BOX SAME");    
     can->SetLogz();
-
+    return;
     //draw jets
     for (unsigned j = 0; j < jets.size(); j++){
         TEllipse* cir = new TEllipse(jets[j].eta(),jets[j].phi(),0.7,0.7);

@@ -31,7 +31,7 @@ puppiContainer::puppiContainer(std::vector<RecoObj> inParticles){
 }
 puppiContainer::~puppiContainer(){}
 double puppiContainer::goodVar(int iId,std::vector<PseudoJet> &iParts, int iOpt) { 
-  double Rsub = 0.3;
+  double Rsub = 1.0;
   double lPup = 0; 
   lPup = var_within_R(iOpt,iParts,_pfParticles[iId],Rsub);            
   if(iOpt > 5) lPup = lPup * _pfParticles[iId].pt()/pt_within_R(_pfParticles,_pfParticles[iId],Rsub);

@@ -316,8 +316,8 @@ void readCMSEvent(TTree *iTree, std::vector< RecoObj > &allParticles) {
     iTree->GetEntry(fCount);
     fCount++;
     if(fPartPt == -1) break;
-    isCh   = (fVtxId > -1);//(fPartPFType == 1 || fPartPFType == 2 || fPartPFType == 3);
-    isPV   = (fVtxId == 0);
+    isCh   = (fVtxId > -1);//(fPartPFType == 1 || fPartPFType == 2 || fPartPFType == 3) && (fVtxId > -1 || fabs(fPartDZ) < 0.2) ;
+    isPV   = (fVtxId == 0);//  || (fabs(fPartDZ) < 0.2 && isCh);// && fabs(fPartD0) < 0.2));
     isPU   = (fGXPt/fPartPt < 0.2);//*(1-TMath::Min(fGXPt,float(1.))));
     TLorentzVector pVec; pVec.SetPtEtaPhiM(fPartPt,fPartEta,fPartPhi,fPartM);
     int lId = 0; if(!isPV) lId++; if(isCh) lId+=2;

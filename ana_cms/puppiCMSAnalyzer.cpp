@@ -84,6 +84,14 @@ float fW4L     = 0;
 float fW5L     = 0; 
 float fW6L     = 0; 
 
+float fW0P  = 0; 
+float fW1P  = 0; 
+float fW2P  = 0; 
+float fW3P  = 0; 
+float fW4P  = 0; 
+float fW5P  = 0; 
+float fW6P  = 0; 
+
 TTree *fTree;
 
 /////////////////////////////////////////////////////////////////////
@@ -124,6 +132,14 @@ void addBranches( TTree &iTree){
   iTree.Branch("ptodR_lv"      ,&fW4L ,"fW4L/F");								    
   iTree.Branch("ptodRS_lv"     ,&fW5L ,"fW5L/F");								    
   iTree.Branch("ptodRSO_lv"    ,&fW6L ,"fW6L/F");								    
+
+  iTree.Branch("dR_pu"         ,&fW0P ,"fW0P/F");								    
+  iTree.Branch("ptc_pu"        ,&fW1P ,"fW1P/F");								    
+  iTree.Branch("ptdR_pu"       ,&fW2P ,"fW2P/F");								    
+  iTree.Branch("puppi_pu"      ,&fW3P ,"fW3P/F");								    
+  iTree.Branch("ptodR_pu"      ,&fW4P ,"fW4P/F");								    
+  iTree.Branch("ptodRS_pu"     ,&fW5P ,"fW5P/F");								    
+  iTree.Branch("ptodRSO_pu"    ,&fW6P ,"fW6P/F");								    
 }
 int main( int argc, char **argv ) {
   bool iCorr = false;
@@ -149,6 +165,7 @@ int main( int argc, char **argv ) {
       lReadout->cd();
       readCMSEvent(fTree, allParticles );        
       puppiContainer curEvent(allParticles);
+      std::vector<fastjet::PseudoJet> puParticles = curEvent.puParticles();
       std::vector<fastjet::PseudoJet> pvParticles = curEvent.pvParticles();
       std::vector<fastjet::PseudoJet> pfParticles = curEvent.pfParticles();
       for(unsigned int i0 = 0; i0 < allParticles.size(); i0++ ) { 
@@ -180,6 +197,14 @@ int main( int argc, char **argv ) {
 	fW4L  = curEvent.goodVar(i0,pvParticles,4);// compute(iCorr,curEvent.goodVar(lConstits[i0],pvParticles,4),lAvgPU[22],lAvgPU[23]);
 	fW5L  = curEvent.goodVar(i0,pvParticles,8);// compute(iCorr,curEvent.goodVar(lConstits[i0],pvParticles,5),lAvgPU[24],lAvgPU[25]);
 	fW6L  = curEvent.goodVar(i0,pvParticles,6);// compute(iCorr,curEvent.goodVar(lConstits[i0],pvParticles,6),lAvgPU[26],lAvgPU[27]);
+
+	fW0P  = curEvent.goodVar(i0,puParticles,0);//compute(iCorr,curEvent.goodVar(lConstits[i0],pvParticles,0),lAvgPU[14],lAvgPU[15]);
+	fW1P  = curEvent.goodVar(i0,puParticles,1);// compute(iCorr,curEvent.goodVar(lConstits[i0],pvParticles,1),lAvgPU[16],lAvgPU[17]);
+	fW2P  = curEvent.goodVar(i0,puParticles,2);// compute(iCorr,curEvent.goodVar(lConstits[i0],pvParticles,2),lAvgPU[18],lAvgPU[19]);
+	fW3P  = curEvent.goodVar(i0,puParticles,7);// compute(iCorr,curEvent.goodVar(lConstits[i0],pvParticles,3),lAvgPU[20],lAvgPU[21]);
+	fW4P  = curEvent.goodVar(i0,puParticles,4);// compute(iCorr,curEvent.goodVar(lConstits[i0],pvParticles,4),lAvgPU[22],lAvgPU[23]);
+	fW5P  = curEvent.goodVar(i0,puParticles,8);// compute(iCorr,curEvent.goodVar(lConstits[i0],pvParticles,5),lAvgPU[24],lAvgPU[25]);
+	fW6P  = curEvent.goodVar(i0,puParticles,6);// compute(iCorr,curEvent.goodVar(lConstits[i0],pvParticles,6),lAvgPU[26],lAvgPU[27]);
 	lTree->Fill();
       }
       allParticles.clear();
