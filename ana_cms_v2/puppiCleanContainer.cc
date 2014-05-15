@@ -12,7 +12,7 @@ using namespace fastjet;
 //FASTJET_BEGIN_NAMESPACE      // defined in fastjet/internal/base.hh
 
 
-puppiCleanContainer::puppiCleanContainer(std::vector<RecoObj> inParticles,bool iExperiment,bool iTuned){
+puppiCleanContainer::puppiCleanContainer(std::vector<RecoObj> inParticles,double iTrackerEta,bool iExperiment,bool iTuned){
     _isExperiment = iExperiment;
     _isTuned      = iTuned;
     fNeutralMinE  = 0.1;  //=> This can be tuned
@@ -24,6 +24,7 @@ puppiCleanContainer::puppiCleanContainer(std::vector<RecoObj> inParticles,bool i
     _chargedPV.resize(0);
     _chargedNoPV.resize(0);
     _vals.resize(0);
+    fTrackerEta   = iTrackerEta;
     //Link to the RecoObjects
     _recoParticles = inParticles;
     for (unsigned int i = 0; i < inParticles.size(); i++){
@@ -62,7 +63,7 @@ void puppiCleanContainer::getRMSAvg(int iOpt,std::vector<fastjet::PseudoJet> &iC
     double pVal = goodVar(iConstits[i0],iParticles,iOpt);
     _vals.push_back(pVal);
     if(iConstits[i0].pt() < iPtRMS) continue;
-    if( fabs(iConstits[i0].eta()) > 2.5   ) {lValsPUHEta.push_back(pVal); }
+    if( fabs(iConstits[i0].eta()) > fTrackerEta   ) {lValsPUHEta.push_back(pVal); }
     if(iConstits[i0].user_index() % 4 == 3) lValsPU.push_back(pVal);
   }
   std::sort (lValsPU    .begin(),lValsPU    .end());   
@@ -140,9 +141,9 @@ std::vector<fastjet::PseudoJet> puppiCleanContainer::puppiEvent     (int iOpt,do
 	  if(_recoParticles[i0].pfType > 3) pChi2 = 0;
 	}
 	//Basic Puppi
-        if(fabs(_pfParticles[i0].eta()) < 2.5) pWeight *= compute(0,_vals[i0]            ,lMed0,lRMS0,pChi2);
-        if(fabs(_pfParticles[i0].eta()) > 2.5) pWeight *= compute(0,_vals[i0+lNEvents]   ,lMed1HEta,lRMS1HEta,pChi2);
-        if(_isTuned) if(fabs(_pfParticles[i0].eta()) > 2.5) pWeight *= compute(0,_vals[i0+2.*lNEvents],lMed2HEta,lRMS2HEta,0);
+        if(fabs(_pfParticles[i0].eta()) < fTrackerEta) pWeight *= compute(0,_vals[i0]            ,lMed0,lRMS0,pChi2);
+        if(fabs(_pfParticles[i0].eta()) > fTrackerEta) pWeight *= compute(0,_vals[i0+lNEvents]   ,lMed1HEta,lRMS1HEta,pChi2);
+        if(_isTuned) if(fabs(_pfParticles[i0].eta()) > fTrackerEta) pWeight *= compute(0,_vals[i0+2.*lNEvents],lMed2HEta,lRMS2HEta,0);
         //CHS
         if(_pfParticles[i0].user_index() == 2 ) pWeight = 1;
         if(_pfParticles[i0].user_index() == 3 ) pWeight = 0;
