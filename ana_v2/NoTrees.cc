@@ -243,23 +243,31 @@ double var_within_R(int iId, const vector<PseudoJet> & particles, const PseudoJe
   double var = 0;
   double lSumPt = 0;
   if(iId == 5 || iId == 6) for(unsigned int i=0; i<near_particles.size(); i++) lSumPt += near_particles[i].pt();
-  for(unsigned int i=0; i<near_particles.size(); i++){
-    double pDEta = near_particles[i].eta()-centre.eta();
-    double pDPhi = fabs(near_particles[i].phi()-centre.phi());
-    if(pDPhi > 2.*3.14159265-pDPhi) pDPhi =  2.*3.14159265-pDPhi;
-    double pDR = sqrt(pDEta*pDEta+pDPhi*pDPhi);
-    if(pDR  < 0.001) continue;
-    if(pDR  <  0.05) pDR = 0.05;
-    if(pDR == 0) continue;
-    if(iId == 0) var += pDR;
-    if(iId == 1) var += near_particles[i].pt();
-    if(iId == 2) var += log(pDR*near_particles[i].pt());
-    if(iId == 3) var += log(near_particles[i].pt()/sqrt(pDR));
-    if(iId == 4) var += log(near_particles[i].pt()/pDR);
-    if(iId == 5) var += log(near_particles[i].pt()/pDR/lSumPt);
-    if(iId == 6) var += log(near_particles[i].pt()/pDR);
-    if(iId == 7) var += log(near_particles[i].pt()/pDR);
-  }
+    for(unsigned int i=0; i<near_particles.size(); i++){
+        double pDEta = near_particles[i].eta()-centre.eta();
+        double pDPhi = fabs(near_particles[i].phi()-centre.phi());
+        if(pDPhi > 2.*3.14159265-pDPhi) pDPhi =  2.*3.14159265-pDPhi;
+        double pDR = sqrt(pDEta*pDEta+pDPhi*pDPhi);
+        if(pDR  < 0.001) continue;
+        if(pDR  <  0.05) pDR = 0.05;
+        if(pDR == 0) continue;
+        if(iId == 0) var += 1./pDR/pDR;
+        if(iId == 1) var += log(1./pDR)*log(1./pDR);
+        if(iId == 2) var += log(1./pDR/pDR)*log(1./pDR/pDR);
+        if(iId == 3) var += log(near_particles[i].pt()*near_particles[i].pt()/pDR/pDR)*log(near_particles[i].pt()*near_particles[i].pt()/pDR/pDR);
+        if(iId == 4) var += 1./pDR/pDR;;
+        if(iId == 5) var += log(near_particles[i].pt()/pDR/lSumPt);
+        if(iId == 6) var += near_particles[i].pt()/pDR;
+        if(iId == 7) var += log(near_particles[i].pt()/pDR);
+        if(iId == 8) var += log(near_particles[i].pt()/pDR)*log(near_particles[i].pt()/pDR);
+        if(iId == 9) var += (near_particles[i].pt()/pDR)*(near_particles[i].pt()/pDR);
+        if(iId ==10) var += near_particles[i].pt();
+        if(iId ==11) var += 1./pDR/pDR;
+        if(iId ==12) var += 1./pDR;
+        if(iId ==13) var += near_particles[i].pt()/pDR;
+        if(iId ==14) var += ((near_particles[i].pt()+centre.pt())*(near_particles[i].pt()+centre.pt())/centre.pt()/near_particles[i].pt()-1)/pDR;
+    }
+  if((iId == 9 || iId == 4 || iId == 12 || iId == 13 || iId == 14) && var != 0) var = log(var);
   return var;
 }
 

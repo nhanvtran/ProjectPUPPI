@@ -20,6 +20,7 @@
 #include "TEllipse.h"
 
 #include <fastjet/ClusterSequence.hh>
+#include <fastjet/JetDefinition.hh>
 #include <fastjet/GhostedAreaSpec.hh>
 #include <fastjet/ClusterSequenceArea.hh>
 #include "fastjet/tools/Filter.hh"
@@ -49,6 +50,9 @@ ifstream fin;
 int njets_;
 int njets_corr_;
 
+float rho_;
+float sigma_;
+
 float sumEt_;
 float etMissX_;
 float etMissY_;
@@ -60,6 +64,9 @@ std::vector<float> v_jet_phi_;
 
 // trimmed info
 std::vector<float> v_jet_m_trimmed_;
+std::vector<float> v_jet_pt_trimmed_;
+std::vector<float> v_jet_eta_trimmed_;
+std::vector<float> v_jet_phi_trimmed_;
 
 // 4-vector subtracted
 std::vector<float> v_jet_m_4Vcorr_;
@@ -68,6 +75,13 @@ std::vector<float> v_jet_eta_4Vcorr_;
 std::vector<float> v_jet_phi_4Vcorr_;
 
 float p_isPU, p_isCH, p_px, p_py, p_pz, p_e, p_puppiW_pfchs, p_cleansedW, p_puppiW_chLV, p_puppiW_all;
+float p_alphas_chLV, p_alphas_all;
+
+// some randoms
+double curRho;
+double pfRho;
+double pfchsRho;
+bool isPFCHS;
 
 /////////////////////////////////////////////////////////////////////
 // Helper functions
@@ -81,6 +95,9 @@ void initVars(){
     njets_ = -1.;
     njets_corr_ = -1.;
     
+    rho_ = -1.;
+    sigma_ = -1.;
+    
     sumEt_ = -1.;
     etMissX_ = -1.;
     etMissY_ = -1.;    
@@ -89,17 +106,23 @@ void initVars(){
     v_jet_pt_.clear();    
     v_jet_eta_.clear(); 
     v_jet_phi_.clear(); 
-    v_jet_m_trimmed_.clear();   
+    v_jet_m_trimmed_.clear();
+    v_jet_pt_trimmed_.clear();
+    v_jet_eta_trimmed_.clear();
+    v_jet_phi_trimmed_.clear();
     v_jet_m_4Vcorr_.clear();
     v_jet_pt_4Vcorr_.clear();
     v_jet_eta_4Vcorr_.clear();
-    v_jet_phi_4Vcorr_.clear();       
+    v_jet_phi_4Vcorr_.clear();
 }
 
 void addBranches( TTree &tree ){
 
     tree.Branch("njets",&njets_);
     tree.Branch("njets_corr",&njets_corr_);
+
+    tree.Branch("rho",&rho_);
+    tree.Branch("sigma",&sigma_);
     
     tree.Branch("sumEt",&sumEt_);
     tree.Branch("etMissX",&etMissX_);
@@ -111,6 +134,9 @@ void addBranches( TTree &tree ){
     tree.Branch("v_jet_phi",&v_jet_phi_);  
 
     tree.Branch("v_jet_m_trimmed",&v_jet_m_trimmed_);    
+    tree.Branch("v_jet_pt_trimmed",&v_jet_pt_trimmed_);
+    tree.Branch("v_jet_eta_trimmed",&v_jet_eta_trimmed_);
+    tree.Branch("v_jet_phi_trimmed",&v_jet_phi_trimmed_);
     
     tree.Branch("v_jet_m_4Vcorr",&v_jet_m_4Vcorr_);    
     tree.Branch("v_jet_pt_4Vcorr",&v_jet_pt_4Vcorr_);    
@@ -131,6 +157,10 @@ void initParticleVars(){
     p_puppiW_pfchs = -1.;
     p_puppiW_chLV = -1.;
     p_puppiW_all = -1.;
+
+    p_alphas_chLV = -1.;
+    p_alphas_all = -1.;
+    
     
     p_cleansedW = -1.;            
 }
@@ -145,7 +175,9 @@ void addParticleBranches( TTree &tree ){
     tree.Branch("p_puppiW_pfchs",&p_puppiW_pfchs);
     tree.Branch("p_puppiW_chLV",&p_puppiW_chLV);
     tree.Branch("p_puppiW_all",&p_puppiW_all);
-    tree.Branch("p_cleansedW",&p_cleansedW);    
+    tree.Branch("p_alphas_chLV",&p_alphas_chLV);
+    tree.Branch("p_alphas_all",&p_alphas_all);
+    tree.Branch("p_cleansedW",&p_cleansedW);
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -156,8 +188,10 @@ void addParticleBranches( TTree &tree ){
 
 int main( int argc, char **argv ) {
     
+    char filename[30];
     int maxEventsVal = atoi(argv[1]);
-    int PUscenario = atoi(argv[2]);    
+    strcpy( filename, argv[2] );
+    int NPU = atoi(argv[3]);
     
     gROOT->ProcessLine("#include <vector>");    
     setTDRStyle();
@@ -166,7 +200,7 @@ int main( int argc, char **argv ) {
     int maxEvents = maxEventsVal;
     
     char tfname[150];
-    sprintf( tfname, "output/outtree_%i.root", PUscenario );    
+    sprintf( tfname, "output/outtree_%s_051514.root", filename );
     TFile fout_(tfname, "RECREATE");
     TTree* tree_gen = new TTree("tree_gen", "tree_gen");
     TTree* tree_pf = new TTree("tree_pf", "tree_pf");
@@ -190,7 +224,8 @@ int main( int argc, char **argv ) {
     std::vector < int > v_isCh;
     
     char fname[150];
-    sprintf( fname, "samples/Zj_%i.dat", PUscenario );
+    sprintf( fname, "samples/%s.dat", filename );
+    //sprintf( fname, "samples/minbias_%i.dat", PUscenario );
     std::cout << "Processing " << fname << std::endl;
     fin.open(fname);
     
@@ -200,14 +235,16 @@ int main( int argc, char **argv ) {
         
         if (nEvts > 1){
             
-            puppiContainer curEvent(allParticles, v_isPU, v_isCh);
+            puppiContainer curEvent(allParticles, v_isPU, v_isCh, 1);
+            
             std::vector<fastjet::PseudoJet> genParticles = curEvent.genParticles();
             std::vector<fastjet::PseudoJet> pfParticles = curEvent.pfParticles();
             std::vector<fastjet::PseudoJet> pfchsParticles = curEvent.pfchsParticles();
             //std::vector<fastjet::PseudoJet> trimmedParticles = curEvent.trimEvent();
             //std::vector<fastjet::PseudoJet> cleansedParticles = curEvent.cleanseEvent(0.3);
             //std::vector<fastjet::PseudoJet> puppiParticles = curEvent.puppiEvent(0.5,2.);
-            std::vector<fastjet::PseudoJet> puppiParticles = curEvent.puppiEvent(80);
+            
+            std::vector<fastjet::PseudoJet> puppiParticles = curEvent.puppiEvent(NPU);
             
 //            for (unsigned int kk = 0; kk < puppiParticles.size(); kk++){
 //                std::cout << "puppiParticles.user_index() = " << puppiParticles[kk].user_index() << std::endl;
@@ -216,27 +253,42 @@ int main( int argc, char **argv ) {
             char canvname[150];
                         
             //            sprintf( canvname, "dummy" );
+            
+            curRho   = -1;
+            pfRho    = -1;
+            pfchsRho = -1;
+            //std::cout << "--------------------" << std::endl;
             initVars();
+            //std::cout << "analyze gen" << std::endl;
             std::vector<fastjet::PseudoJet> genJets = analyzeEvent( genParticles, *tree_gen, canvname, 0.7 );
             initVars();
+            //std::cout << "analyze pf" << std::endl;
             std::vector<fastjet::PseudoJet> pfJets = analyzeEvent( pfParticles, *tree_pf, canvname, 0.7 );
+            pfRho = curRho;
             initVars();
+            //std::cout << "analyze pfchs" << std::endl;
+            isPFCHS = true;
             std::vector<fastjet::PseudoJet> pfchsJets = analyzeEvent( curEvent.pfchsParticles(), *tree_pfchs, canvname, 0.7 );
+            pfchsRho = curRho;
+            isPFCHS = false;
             //            initVars();
             //            analyzeEvent( trimmedParticles, *tree_pf_tr, canvname, 0.7 );
             //            initVars();
             //            analyzeEvent( cleansedParticles, *tree_pf_cl, canvname, 0.7 );
             initVars();
+            //std::cout << "analyze puppi" << std::endl;
             std::vector<fastjet::PseudoJet> puppiJets = analyzeEvent( puppiParticles, *tree_pf_puppi, canvname, 0.7 );
             //
             
             
-            if (nEvts < 50 and nEvts > 0){
+            if (nEvts < 200 and nEvts > 0){
                                                 
                 std::vector<float> puppiWeights_pfchs = curEvent.getPuppiWeights_pfchs();
                 std::vector<float> puppiWeights_chLV = curEvent.getPuppiWeights_chLV();                
                 std::vector<float> puppiWeights_all = curEvent.getPuppiWeights_all();                
-                /////std::vector<float> cleansedWeights = curEvent.getCleansedWeights();    
+                std::vector<float> alphas_chLV = curEvent.getPuppiAlphas_chLV();
+                std::vector<float> alphas_all = curEvent.getPuppiAlphas_all();
+                /////std::vector<float> cleansedWeights = curEvent.getCleansedWeights();
                 // fill weights
                 for (unsigned int a = 0; a < pfParticles.size(); a++){
                     if (pfParticles[a].user_index() == 1 || pfParticles[a].user_index() == 3) p_isPU = 1;
@@ -248,25 +300,29 @@ int main( int argc, char **argv ) {
                     p_pz = pfParticles[a].pz();
                     p_e = pfParticles[a].e();
 //                    p_puppiW_pfchs = puppiWeights_pfchs[a];
-//                    p_puppiW_chLV = puppiWeights_chLV[a];
-//                    p_puppiW_all = puppiWeights_all[a];                                        
-                    /////p_cleansedW = cleansedWeights[a];            
+                    p_puppiW_chLV = puppiWeights_chLV[a];
+                    p_puppiW_all = puppiWeights_all[a];
+                    p_alphas_chLV = alphas_chLV[a];
+                    p_alphas_all = alphas_all[a];
+                    /////p_cleansedW = cleansedWeights[a];
                     tree_particles->Fill();
                 }
-                                
-                sprintf( canvname, "displays/dis_gen_%i_%i", nEvts, PUscenario );
-                plotEvent( genParticles, canvname, genJets );
-                sprintf( canvname, "displays/dis_pf_%i_%i", nEvts, PUscenario );
-                plotEvent( pfParticles, canvname, pfJets);
-                sprintf( canvname, "displays/dis_pfchs_%i_%i", nEvts, PUscenario );
-                plotEvent( pfchsParticles, canvname, pfchsJets );                
-                //                sprintf( canvname, "displays/dis_pf_tr_%i_%i", nEvts, PUscenario );
-                //                plotEvent( trimmedParticles, canvname );
-                //                sprintf( canvname, "displays/dis_pf_cl_%i_%i", nEvts, PUscenario );
-                //                plotEvent( cleansedParticles, canvname );
-                sprintf( canvname, "displays/dis_pf_puppi_%i_%i", nEvts, PUscenario );
-                plotEvent( puppiParticles, canvname, puppiJets );
                 
+                if (nEvts < 0){
+                                
+                    sprintf( canvname, "displays/dis_gen_%i_%i", nEvts, NPU );
+                    plotEvent( genParticles, canvname, genJets );
+                    sprintf( canvname, "displays/dis_pf_%i_%i", nEvts, NPU );
+                    plotEvent( pfParticles, canvname, pfJets);
+                    sprintf( canvname, "displays/dis_pfchs_%i_%i", nEvts, NPU );
+                    plotEvent( pfchsParticles, canvname, pfchsJets );                
+                    //                sprintf( canvname, "displays/dis_pf_tr_%i_%i", nEvts, PUscenario );
+                    //                plotEvent( trimmedParticles, canvname );
+                    //                sprintf( canvname, "displays/dis_pf_cl_%i_%i", nEvts, PUscenario );
+                    //                plotEvent( cleansedParticles, canvname );
+                    sprintf( canvname, "displays/dis_pf_puppi_%i_%i", nEvts, NPU );
+                    plotEvent( puppiParticles, canvname, puppiJets );
+                }
             }            
             
             allParticles.clear();
@@ -275,7 +331,7 @@ int main( int argc, char **argv ) {
         }
         
         nEvts++;
-        if (nEvts % 10 == 0) std::cout << "event no. = " << nEvts << std::endl;
+        if (nEvts % 100 == 0) std::cout << "event no. = " << nEvts << std::endl;
         if (nEvts == maxEvents){ break; }
         
         if(fin.eof()) break;
@@ -337,9 +393,12 @@ void plotEvent( std::vector < fastjet::PseudoJet > constits, char* name, std::ve
         int curBin = h2d->FindBin(constits[i].eta(),constits[i].phi());
         if (constits[i].pt() > maxCell) maxCell = constits[i].pt();
 
-        if (constits[i].user_index() == 1 || constits[i].user_index() == 3) h2d_PU->SetBinContent( curBin, h2d_PU->GetBinContent(curBin) + constits[i].pt() );        
-        else h2d->SetBinContent( curBin, h2d->GetBinContent(curBin) + constits[i].pt() );
-        
+        if (constits[i].user_index() == 1 || constits[i].user_index() == 3){
+            h2d_PU->SetBinContent( curBin, h2d_PU->GetBinContent(curBin) + constits[i].pt() );
+        }
+        else{
+            h2d->SetBinContent( curBin, h2d->GetBinContent(curBin) + constits[i].pt() );
+        }
     }
 
     //std::cout << "maxCell = " << maxCell << std::endl;
@@ -349,11 +408,13 @@ void plotEvent( std::vector < fastjet::PseudoJet > constits, char* name, std::ve
     h2d->SetMaximum( 1.1*max(h2d->GetMaximum(),h2d_PU->GetMaximum()) );
     h2d->SetMinimum( 1e-1 );
 //    h2d->SetLineWidth( 2 );
-    h2d->Draw("BOX");
+    h2d->Draw("COLZ");    
     h2d_PU->SetLineWidth( 1 );
-    h2d_PU->Draw("BOX SAME");    
+    h2d_PU->SetLineColor( 14 );
+    h2d_PU->Draw("BOX");
+    h2d->Draw("COLZ SAME");
     can->SetLogz();
-    return;
+
     //draw jets
     for (unsigned j = 0; j < jets.size(); j++){
         TEllipse* cir = new TEllipse(jets[j].eta(),jets[j].phi(),0.7,0.7);
@@ -368,13 +429,15 @@ void plotEvent( std::vector < fastjet::PseudoJet > constits, char* name, std::ve
         }
         else{
             cir->SetLineColor( 6 );
+            cir->SetLineWidth( 2 );
         }
         
         cir->Draw("sames");
     }
     
     char oname[96];
-    sprintf(oname,"%s.eps",name);
+    sprintf(oname,"%s.pdf",name);
+    can->SaveAs(oname);
     sprintf(oname,"%s.png",name);
     can->SaveAs(oname);
     delete h2d;
@@ -395,22 +458,43 @@ std::vector< fastjet::PseudoJet > analyzeEvent( std::vector < fastjet::PseudoJet
     double ghostEtaMax = 7.0;
     
     fastjet::GhostedAreaSpec fjActiveArea(ghostEtaMax,activeAreaRepeats,ghostArea);
-    fastjet::AreaDefinition fjAreaDefinition( fastjet::active_area, fjActiveArea );
+    fastjet::AreaDefinition fjAreaDefinition( fastjet::active_area_explicit_ghosts, fjActiveArea );
     fastjet::ClusterSequenceArea* thisClustering_ = new fastjet::ClusterSequenceArea(constits, jetDef, fjAreaDefinition);
-    std::vector<fastjet::PseudoJet> out_jets_ = sorted_by_pt(thisClustering_->inclusive_jets(25.0));
+    std::vector<fastjet::PseudoJet> out_jets_ = sorted_by_pt(thisClustering_->inclusive_jets(15.0));
     
     // trim jet
     fastjet::Filter trimmer( fastjet::Filter(fastjet::JetDefinition(fastjet::kt_algorithm, 0.3), fastjet::SelectorPtFractionMin(0.05)));
     
     // 4-vector subtraction
-    fastjet::GridMedianBackgroundEstimator lGrid(5.0,0.8);
-    lGrid.set_particles(constits);
+    std::vector<fastjet::PseudoJet> neutrals;
+    float etarange = 5.0;
+    if(isPFCHS){
+        // get the neutrals and compute rho only inside of 2.5
+        etarange = 2.5;
+        for (unsigned int aa = 0; aa < constits.size(); aa++){
+            if(constits[aa].user_index() <= 1) neutrals.push_back(constits[aa]);
+        }
+    }
+    fastjet::GridMedianBackgroundEstimator lGrid(etarange,0.8);
+    if (isPFCHS) lGrid.set_particles(neutrals);
+    else lGrid.set_particles(constits);
+    
+    curRho = lGrid.rho();
+    rho_ = lGrid.rho();
+    sigma_ = lGrid.sigma();
+
+    double forwardRho = lGrid.rho();
+    double centralRho = lGrid.rho();
+    if(isPFCHS){ forwardRho = pfRho; }
+    //std::cout << "centralRho = " << centralRho << ", forwardRho = " << forwardRho << std::endl;
     
     njets_corr_ = 0;
     
     // ++++++++++++++++++++++++++++++++++++++++++++++++++++
     // FILL IN THE TREE
-    //std::cout << "out_jets_.size() = " << out_jets_.size() << std::endl; 
+    //std::cout << "out_jets_.size() = " << out_jets_.size() << std::endl;
+    std::vector<fastjet::PseudoJet> corrjets;
+    
     njets_ = (int) out_jets_.size();
     for (unsigned int i = 0; i < out_jets_.size(); i++){
 
@@ -418,21 +502,35 @@ std::vector< fastjet::PseudoJet > analyzeEvent( std::vector < fastjet::PseudoJet
         v_jet_pt_.push_back( out_jets_[i].pt() );        
         v_jet_eta_.push_back( out_jets_[i].eta() );                
         v_jet_phi_.push_back( out_jets_[i].phi() );                
-
-        // trim jet
-        fastjet::PseudoJet trimmedJet = (trimmer)(out_jets_.at(i));
-        v_jet_m_trimmed_.push_back( trimmedJet.m() );
         
         // 4-vector subtraction
         PseudoJet pCorrJet = out_jets_.at(i);        
         PseudoJet pArea = out_jets_.at(i).area_4vector();
-        pCorrJet -= lGrid.rho() * pArea;
+    
+        double tmpRho = -9999;
+        if (fabs(pCorrJet.eta()) > 2.5) tmpRho = forwardRho;
+        else tmpRho = centralRho;
+        
+        pCorrJet -= tmpRho * pArea;
+    
         v_jet_m_4Vcorr_.push_back(pCorrJet.m());
         v_jet_pt_4Vcorr_.push_back(pCorrJet.pt());
         v_jet_eta_4Vcorr_.push_back(pCorrJet.eta());
         v_jet_phi_4Vcorr_.push_back(pCorrJet.phi());
+
+        // trim jet + 4-vector subtraction
+        fastjet::PseudoJet trimmedJet = (trimmer)(out_jets_.at(i));
+        PseudoJet tjetArea = trimmedJet.area_4vector();
+        trimmedJet -= tmpRho*tjetArea;
+        v_jet_m_trimmed_.push_back( trimmedJet.m() );
+        v_jet_pt_trimmed_.push_back( trimmedJet.pt() );
+        v_jet_eta_trimmed_.push_back( trimmedJet.eta() );
+        v_jet_phi_trimmed_.push_back( trimmedJet.phi() );
         
-        if (v_jet_pt_4Vcorr_[i] > 25.0) njets_corr_++;        
+        if (v_jet_pt_4Vcorr_[i] > 25.0){
+            njets_corr_++;
+            corrjets.push_back(pCorrJet);
+        }
     }
     
     // MET variables
@@ -453,7 +551,7 @@ std::vector< fastjet::PseudoJet > analyzeEvent( std::vector < fastjet::PseudoJet
     
     if (out_jets_.size() > 0) thisClustering_->delete_self_when_unused();
     
-    return out_jets_;
+    return corrjets;
 }
 
 

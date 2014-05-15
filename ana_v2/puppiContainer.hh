@@ -23,6 +23,8 @@ public:
     std::vector<float> getPuppiWeights_pfchs(){ return puppiWeights_pfchs; };  
     std::vector<float> getPuppiWeights_chLV(){ return puppiWeights_chLV; };  
     std::vector<float> getPuppiWeights_all(){ return puppiWeights_all; };  
+    std::vector<float> getPuppiAlphas_chLV(){ return alphas_chLV; };
+    std::vector<float> getPuppiAlphas_all(){ return alphas_all; };
     
     std::vector<float> getCleansedWeights(){ return cleansedWeights; };      
     
@@ -43,12 +45,15 @@ protected:
     
     void discretize(std::vector<fastjet::PseudoJet> &discreteParticles,std::vector<fastjet::PseudoJet> &iParticles);
     
-    double  goodVar  (fastjet::PseudoJet &iPart,std::vector<fastjet::PseudoJet> &iParts, int iOpt);        
-    void   getRMSAvg(int iOpt,std::vector<fastjet::PseudoJet> &iConstits,std::vector<fastjet::PseudoJet> &iParticles,std::vector<int> &iIsPU,double iQuant,double iPtRMS);
-    double  compute  (int iOpt,double iVal,double iMed,double iRMS);    
+    double  goodVar  (fastjet::PseudoJet &iPart,std::vector<fastjet::PseudoJet> &iParts, int iOpt, double R0);
+    void   getRMSAvg(int iOpt,std::vector<fastjet::PseudoJet> &iConstits,std::vector<fastjet::PseudoJet> &iParticles,std::vector<int> &iIsPU,double iQuant,double iPtRMS, double R0, bool countZeros=true);
+    double  compute  (int iOpt,double iVal,double iMed,double iRMS);
+    double  compute2dof  (double iVal,double iMed,double iRMS,double iVal2,double iMed2,double iRMS2);
     std::vector<double> _vals;
     double fMed;
     double fRMS;
+    double fMedHEta;
+    double fRMSHEta;
     
     std::vector<PseudoJet> _pfParticles;
     std::vector<PseudoJet> _pfchsParticles;    
@@ -66,6 +71,9 @@ protected:
     std::vector<float> puppiWeights_pfchs;
     std::vector<float> puppiWeights_chLV;
     std::vector<float> puppiWeights_all;
+    std::vector<float> alphas_chLV;
+    std::vector<float> alphas_all;
+
     
     std::vector<float> cleansedWeights;
 };
